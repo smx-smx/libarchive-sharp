@@ -43,11 +43,17 @@ namespace tests
             var reader = new ArchiveReader(ms);
 
             var entry = reader.Entries.First();
-            Console.WriteLine(entry.PathName);
             Assert.That(entry.PathName == "test.txt");
             Assert.That(entry.FileType == ArchiveEntryType.File);
             Assert.That(entry.Permissions == Convert.ToUInt16("644", 8));
             Assert.That(entry.Size > 0);
+
+            // extract file
+            using var dwr = new ArchiveDiskWriter();
+            dwr.AddEntry(entry, reader.InputStream);
+
+            Assert.That(File.Exists("test.txt"));
+            Assert.That(File.ReadAllText("test.txt") == "Hello world");
         }
     }
 }

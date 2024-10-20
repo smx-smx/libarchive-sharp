@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 
 namespace libarchive.Managed
 {
-    public class ArchiveStream : IArchiveStream, IDisposable
+    public class ArchiveDataStream : IArchiveStream, IDisposable
     {
         private readonly Stream _stream;
         private readonly bool _leaveOpen;
@@ -25,7 +25,7 @@ namespace libarchive.Managed
         private Memory<byte> _buffer;
         private nint _bufferHandle;
 
-        public ArchiveStream(Stream baseStream, bool leaveOpen = false, int bufferSize = -1)
+        public ArchiveDataStream(Stream baseStream, bool leaveOpen = false, int bufferSize = -1)
         {
             _stream = baseStream;
             _leaveOpen = leaveOpen;

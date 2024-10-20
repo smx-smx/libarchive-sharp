@@ -6,10 +6,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #endregion
-﻿using Smx.SharpIO.Memory;
+using Smx.SharpIO.Memory;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using static libarchive.Methods;
@@ -37,26 +38,30 @@ namespace libarchive.Managed
     {
         private readonly TypedPointer<archive> _handle;
         private bool _disposed = false;
-        private bool _owned;
+        private readonly bool _owned;
+        private readonly ArchiveInputStream _inputStream;
 
         public int LastError => archive_errno(_handle);
         public string LastErrorString => archive_error_string(_handle);
 
-        private ArchiveStream _stream;
+        private ArchiveDataStream _stream;
         private readonly Delegates.archive_read_callback _read_callback;
         private readonly Delegates.archive_close_callback _close_callback;
         private readonly Delegates.archive_seek_callback _seek_callback;
         private readonly Delegates.archive_skip_callback _skip_callback;
 
+        public ArchiveInputStream InputStream => _inputStream;
+
         public ArchiveReader(Stream stream)
-            : this(NewHandle(), new ArchiveStream(stream), true)
+            : this(NewHandle(), new ArchiveDataStream(stream), true)
         { }
 
-        public ArchiveReader(TypedPointer<archive> handle, ArchiveStream stream, bool owned)
+        public ArchiveReader(TypedPointer<archive> handle, ArchiveDataStream stream, bool owned)
         {
             _handle = handle;
             _stream = stream;
             _owned = owned;
+            _inputStream = new ArchiveInputStream(handle);
 
             // required to allocated client datasets, or we will crash
             archive_read_set_callback_data(handle, 0);

@@ -6,7 +6,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #endregion
-﻿using Smx.SharpIO.Memory;
+using Smx.SharpIO.Memory;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -32,11 +32,11 @@ namespace libarchive.Managed
         private readonly bool _owned;
         private bool _disposed;
 
-        private ArchiveStream _stream;
-        private readonly Delegates.archive_open_callback _open_callback;
-        private readonly Delegates.archive_write_callback _write_callback;
-        private readonly Delegates.archive_close_callback _close_callback;
-        private readonly Delegates.archive_free_callback _free_callback;
+        private ArchiveDataStream? _stream;
+        private readonly Delegates.archive_open_callback? _open_callback;
+        private readonly Delegates.archive_write_callback? _write_callback;
+        private readonly Delegates.archive_close_callback? _close_callback;
+        private readonly Delegates.archive_free_callback? _free_callback;
 
         public ArchiveWriter(
             Stream stream,
@@ -47,7 +47,7 @@ namespace libarchive.Managed
         )
             : this(
                   handle: NewHandle(),
-                  stream: new ArchiveStream(stream, leaveOpen),
+                  stream: new ArchiveDataStream(stream, leaveOpen),
                   owned: true,
                   format: format,
                   compression: compression,
@@ -57,7 +57,16 @@ namespace libarchive.Managed
 
         public ArchiveWriter(
             TypedPointer<archive> handle,
-            ArchiveStream stream,
+            bool owned
+        )
+        {
+            _handle = handle;
+            _owned = owned;
+        }
+
+        public ArchiveWriter(
+            TypedPointer<archive> handle,
+            ArchiveDataStream stream,
             bool owned,
             ArchiveFormat format,
             ArchiveCompression? compression = null,
@@ -144,6 +153,11 @@ namespace libarchive.Managed
                     throw new ArchiveOperationFailedException(nameof(archive_write_data), "failed to write data");
                 }
             } while (nRead > 0);
+
+            if (archive_write_finish_entry(_handle) != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(nameof(archive_write_finish_entry), "failed to close entry");
+            }
         }
 
         public void AddEntry(ArchiveEntry entry, Stream? stream = null)

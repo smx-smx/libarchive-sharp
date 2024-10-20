@@ -6,7 +6,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #endregion
-﻿using Smx.SharpIO.Memory;
+using Smx.SharpIO.Memory;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -23,9 +23,6 @@ namespace libarchive.Managed
         private readonly TypedPointer<archive_entry> _handle;
         private readonly bool _owned;
         private bool _disposed;
-        private bool _sizeProvided;
-
-        public bool HasSize => _sizeProvided;
 
         public TypedPointer<archive> Archive => _archive;
         public TypedPointer<archive_entry> Handle => _handle;
@@ -49,7 +46,6 @@ namespace libarchive.Managed
             _archive = archive;
             _handle = handle;
             _owned = owned;
-            _sizeProvided = false;
         }
 
         private static TypedPointer<archive_entry> NewHandle(TypedPointer<archive> archive)
@@ -61,11 +57,6 @@ namespace libarchive.Managed
                 throw new ArchiveOperationFailedException(nameof(archive_entry_new), "out of memory");
             }
             return handle;
-        }
-
-        public ArchiveEntryStream OpenStream()
-        {
-            return new ArchiveEntryStream(this);
         }
 
         protected virtual void Dispose(bool disposing)
@@ -163,6 +154,22 @@ namespace libarchive.Managed
             get => archive_entry_dev(_handle);
             set => archive_entry_set_dev(_handle, value);
         }
+        public uint RootDevice
+        {
+            get => archive_entry_rdev(_handle);
+            set => archive_entry_set_rdev(_handle, value);
+        }
+        public uint RootDeviceMajor
+        {
+            get => archive_entry_rdevmajor(_handle);
+            set => archive_entry_set_rdevmajor(_handle, value);
+        }
+        public uint RootDeviceMinor
+        {
+            get => archive_entry_rdevminor(_handle);
+            set => archive_entry_set_rdevminor(_handle, value);
+        }
+
         public uint DeviceMajor
         {
             get => archive_entry_devmajor(_handle);
@@ -192,19 +199,40 @@ namespace libarchive.Managed
             get => archive_entry_is_data_encrypted(_handle) == 1;
             set => archive_entry_set_is_data_encrypted(_handle, (sbyte)(value ? 1 : 0));
         }
+
+        public bool HasSize => archive_entry_size_is_set(_handle) != 0;
+        public bool HasPerm => archive_entry_perm_is_set(_handle) != 0;
+        public bool HasDevice => archive_entry_dev_is_set(_handle) != 0;
+        public bool HasRootDevice => archive_entry_rdev_is_set(_handle) != 0;
+        public bool HasUid => archive_entry_uid_is_set(_handle) != 0;
+        public bool HasAccessTime => archive_entry_atime_is_set(_handle) != 0;
+        public bool HasBirthTime => archive_entry_birthtime_is_set(_handle) != 0;
+        public bool HasCreationTime => archive_entry_ctime_is_set(_handle) != 0;
+
         public long Size
         {
             get => archive_entry_size(_handle);
-            set
-            {
-                _sizeProvided = true;
-                archive_entry_set_size(_handle, value);
-            }
+            set => archive_entry_set_size(_handle, value);
         }
         public ushort Mode
         {
             get => archive_entry_mode(_handle);
             set => archive_entry_set_mode(_handle, value);
+        }
+
+        public uint FileFlags
+        {
+            get
+            {
+                archive_entry_fflags(_handle, out var set, out var _);
+                return set;
+            }
+        }
+
+        public string FileFlagsText
+        {
+            get => archive_entry_fflags_text(_handle);
+            set => archive_entry_copy_fflags_text_w(_handle, value);
         }
 
         public override string ToString()

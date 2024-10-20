@@ -6,39 +6,43 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #endregion
-﻿using System;
+﻿using Smx.SharpIO.Memory;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using static libarchive.Methods;
 
 namespace libarchive.Managed
 {
-    public class ArchiveEntryStream : Stream
+    public class ArchiveInputStream : Stream
     {
-        private readonly ArchiveEntry _entry;
-        private long _position;
+        private readonly TypedPointer<archive> _handle;
 
-        public ArchiveEntryStream(ArchiveEntry entry)
+        public ArchiveInputStream(TypedPointer<archive> handle)
         {
-            _entry = entry;
-            _position = 0;
+            _handle = handle;
         }
 
         public override bool CanRead => true;
 
-        public override bool CanSeek => false;
+        public override bool CanSeek => true;
 
         public override bool CanWrite => false;
 
-        public override long Length => _entry.Size;
+        public override long Length => throw new NotImplementedException();
 
-        public override long Position { get => _position; set => _position = value; }
+        public override long Position
+        {
+            get => archive_seek_data(_handle, 0, SeekOrigin.Current);
+            set => Seek(value, SeekOrigin.Begin);
+        }
 
         public override void Flush()
-        { }
+        {
+            throw new NotImplementedException();
+        }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
@@ -46,14 +50,14 @@ namespace libarchive.Managed
             {
                 fixed (byte* dptr = buffer)
                 {
-                    return (int)archive_read_data(_entry.Archive, new nint(dptr), (nuint)count);
+                    return (int)archive_read_data(_handle, new nint(dptr), (nuint)count);
                 }
             }
         }
 
         public override long Seek(long offset, SeekOrigin origin)
         {
-            return archive_seek_data(_entry.Archive, offset, origin);
+            return archive_seek_data(_handle, offset, origin);
         }
 
         public override void SetLength(long value)
