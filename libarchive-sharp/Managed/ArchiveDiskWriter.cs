@@ -6,7 +6,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #endregion
-﻿using Smx.SharpIO.Memory;
+using Smx.SharpIO.Memory;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,7 +42,7 @@ namespace libarchive.Managed
 
             if (archive_write_disk_set_options(handle, flags) != ArchiveError.OK)
             {
-                throw new ArchiveOperationFailedException(nameof(archive_write_disk_set_options), "failed to set write disk flags");
+                throw new ArchiveOperationFailedException(handle, nameof(archive_write_disk_set_options), "failed to set write disk flags");
             }
             archive_write_disk_set_standard_lookup(handle);
         }

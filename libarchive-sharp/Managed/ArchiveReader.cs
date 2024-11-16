@@ -17,12 +17,6 @@ using static libarchive.Methods;
 
 namespace libarchive.Managed
 {
-    public enum ArchiveMode
-    {
-        Read,
-        Write
-    }
-
     public class ArchiveOperationFailedException : Exception
     {
         public ArchiveOperationFailedException(string func, ArchiveError err)
@@ -31,6 +25,14 @@ namespace libarchive.Managed
 
         public ArchiveOperationFailedException(string func, string err)
             : base($"{func} failed: {err}")
+        { }
+
+        public ArchiveOperationFailedException(TypedPointer<archive> handle, string func)
+            : base($"{func} failed: {archive_errno(handle):X}: {archive_error_string(handle)}")
+        { }
+
+        public ArchiveOperationFailedException(TypedPointer<archive> handle, string func, string err)
+            : base($"{func} failed: {err}. ({archive_errno(handle):X}: {archive_error_string(handle)})")
         { }
     }
 

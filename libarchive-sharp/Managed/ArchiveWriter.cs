@@ -42,7 +42,7 @@ namespace libarchive.Managed
             Stream stream,
             ArchiveFormat format,
             ArchiveCompression? compression = null,
-            ArchiveFilter? filter = null,
+            ICollection<ArchiveFilter>? filters = null,
             bool leaveOpen = false
         )
             : this(
@@ -50,8 +50,8 @@ namespace libarchive.Managed
                   stream: new ArchiveDataStream(stream, leaveOpen),
                   owned: true,
                   format: format,
-                  compression: compression,
-                  filter: filter
+                  filters: filters,
+                  compression: compression
             )
         { }
 
@@ -64,28 +64,37 @@ namespace libarchive.Managed
             _owned = owned;
         }
 
+        private void AddFilter(ArchiveFilter filter)
+        {
+            if (archive_write_add_filter(_handle, filter) != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_add_filter), "failed to add archive filter");
+            }
+        }
+
         public ArchiveWriter(
             TypedPointer<archive> handle,
             ArchiveDataStream stream,
             bool owned,
             ArchiveFormat format,
-            ArchiveCompression? compression = null,
-            ArchiveFilter? filter = null)
+            ICollection<ArchiveFilter>? filters = null,
+            ArchiveCompression? compression = null
+        )
         {
             _handle = handle;
             _owned = owned;
             _disposed = false;
             _stream = stream;
 
-            if (GetArchiveFormatSetter(format)(handle) != ArchiveError.OK)
+            if (archive_write_set_format(handle, format) != ArchiveError.OK)
             {
-                throw new ArchiveOperationFailedException(nameof(GetArchiveCompressionSetter), "failed to set archive format");
+                throw new ArchiveOperationFailedException(handle, nameof(GetArchiveCompressionSetter), "failed to set archive format");
             }
-            if (filter != null)
+            if (filters != null)
             {
-                if (GetArchiveFilterSetter(filter.Value)(handle) != ArchiveError.OK)
+                foreach (var filter in filters)
                 {
-                    throw new ArchiveOperationFailedException(nameof(GetArchiveFilterSetter), "failed to set archive filter");
+                    AddFilter(filter);
                 }
             }
 
@@ -118,17 +127,21 @@ namespace libarchive.Managed
         public void AddEntry(SharedPtr<ArchiveEntry> entryRef, Stream? stream = null)
         {
             var entry = entryRef.AddRef();
-
-            if (stream != null && !entry.HasSize)
+            try
             {
-                entry.Size = stream.Length;
-            }
+                if (stream != null && entry.Size == null)
+                {
+                    entry.Size = stream.Length;
+                }
 
-            if (archive_write_header(_handle, entry.Handle) != ArchiveError.OK)
+                if (archive_write_header(_handle, entry.Handle) != ArchiveError.OK)
+                {
+                    throw new ArchiveOperationFailedException(_handle, nameof(archive_write_header), "failed to write archive entry");
+                }
+            } finally
             {
-                throw new InvalidOperationException("failed to write archive entry");
+                entryRef.Release();
             }
-            entryRef.Release();
 
             if (stream == null)
             {
@@ -150,13 +163,13 @@ namespace libarchive.Managed
                 var nWritten = archive_write_data(_handle, bufferHandle, (nuint)nRead);
                 if (nWritten < 0)
                 {
-                    throw new ArchiveOperationFailedException(nameof(archive_write_data), "failed to write data");
+                    throw new ArchiveOperationFailedException(_handle, nameof(archive_write_data), "failed to write data");
                 }
             } while (nRead > 0);
 
             if (archive_write_finish_entry(_handle) != ArchiveError.OK)
             {
-                throw new ArchiveOperationFailedException(nameof(archive_write_finish_entry), "failed to close entry");
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_finish_entry), "failed to close entry");
             }
         }
 
@@ -188,56 +201,6 @@ namespace libarchive.Managed
                 ArchiveCompression.lzip => archive_write_set_compression_lzip,
                 ArchiveCompression.bzip2 => archive_write_set_compression_bzip2,
                 _ => throw new NotSupportedException(Enum.GetName(compression))
-            };
-        }
-
-        private static Func<TypedPointer<archive>, ArchiveError> GetArchiveFilterSetter(ArchiveFilter filter)
-        {
-            return filter switch
-            {
-                ArchiveFilter.b64encode => archive_write_add_filter_b64encode,
-                ArchiveFilter.bzip2 => archive_write_add_filter_bzip2,
-                ArchiveFilter.compress => archive_write_add_filter_compress,
-                ArchiveFilter.gzip => archive_write_add_filter_gzip,
-                ArchiveFilter.lrzip => archive_write_add_filter_lrzip,
-                ArchiveFilter.lz4 => archive_write_add_filter_lz4,
-                ArchiveFilter.lzip => archive_write_add_filter_lzip,
-                ArchiveFilter.lzma => archive_write_add_filter_lzma,
-                ArchiveFilter.lzop => archive_write_add_filter_lzop,
-                ArchiveFilter.uuencode => archive_write_add_filter_uuencode,
-                ArchiveFilter.xz => archive_write_add_filter_xz,
-                ArchiveFilter.zstd => archive_write_add_filter_zstd,
-                _ => throw new NotSupportedException(Enum.GetName(filter))
-            };
-        }
-
-        private static Func<TypedPointer<archive>, ArchiveError> GetArchiveFormatSetter(ArchiveFormat format)
-        {
-            return format switch
-            {
-                ArchiveFormat.sevenzip => archive_write_set_format_7zip,
-                ArchiveFormat.ar_bsd => archive_write_set_format_ar_bsd,
-                ArchiveFormat.ar_svr4 => archive_write_set_format_ar_svr4,
-                ArchiveFormat.cpio => archive_write_set_format_cpio,
-                ArchiveFormat.cpio_bin => archive_write_set_format_cpio_bin,
-                ArchiveFormat.cpio_newc => archive_write_set_format_cpio_newc,
-                ArchiveFormat.cpio_odc => archive_write_set_format_cpio_odc,
-                ArchiveFormat.cpio_pwb => archive_write_set_format_cpio_pwb,
-                ArchiveFormat.gnutar => archive_write_set_format_gnutar,
-                ArchiveFormat.iso9660 => archive_write_set_format_iso9660,
-                ArchiveFormat.mtree => archive_write_set_format_mtree,
-                ArchiveFormat.mtree_classic => archive_write_set_format_mtree_classic,
-                ArchiveFormat.pax => archive_write_set_format_pax,
-                ArchiveFormat.pax_restricted => archive_write_set_format_pax_restricted,
-                ArchiveFormat.raw => archive_write_set_format_raw,
-                ArchiveFormat.shar => archive_write_set_format_shar,
-                ArchiveFormat.shar_dump => archive_write_set_format_shar_dump,
-                ArchiveFormat.ustar => archive_write_set_format_ustar,
-                ArchiveFormat.v7tar => archive_write_set_format_v7tar,
-                ArchiveFormat.warc => archive_write_set_format_warc,
-                ArchiveFormat.xar => archive_write_set_format_xar,
-                ArchiveFormat.zip => archive_write_set_format_zip,
-                _ => throw new NotSupportedException(Enum.GetName(format))
             };
         }
 

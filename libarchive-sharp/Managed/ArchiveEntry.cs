@@ -11,6 +11,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using static libarchive.Methods;
@@ -65,7 +67,7 @@ namespace libarchive.Managed
             if (disposing)
             { }
 
-            if (_owned)
+            if (_owned && _handle.Address != 0)
             {
                 archive_entry_free(_handle);
             }
@@ -98,66 +100,108 @@ namespace libarchive.Managed
             get => archive_entry_hardlink_w(_handle);
             set => archive_entry_copy_hardlink_w(_handle, value);
         }
-        public ushort Permissions
+        public ushort? Permissions
         {
-            get => archive_entry_perm(_handle);
-            set => archive_entry_set_perm(_handle, value);
+            get => archive_entry_perm_is_set(_handle) ? archive_entry_perm(_handle) : null;
+            set
+            {
+                if (value == null) throw new ArgumentNullException(nameof(value));
+                archive_entry_set_perm(_handle, value.Value);
+            }
         }
-        public DateTime AccessTime
+        public DateTime? AccessTime
         {
-            get => DateTime.UnixEpoch.AddSeconds(archive_entry_atime(_handle)).ToLocalTime();
-            set => archive_entry_set_atime(
-                _handle,
-                (long)value.ToUniversalTime().Subtract(DateTime.UnixEpoch).TotalSeconds,
-                value.Nanosecond
-            );
+            get => archive_entry_atime_is_set(_handle) ? DateTime.UnixEpoch.AddSeconds(archive_entry_atime(_handle)).ToLocalTime() : null;
+            set
+            {
+                if (value == null) throw new ArgumentNullException(nameof(value));
+                var v = value.Value;
+                archive_entry_set_atime(
+                    _handle,
+                    (long)v.ToUniversalTime().Subtract(DateTime.UnixEpoch).TotalSeconds,
+                    v.Nanosecond
+                );
+            }
         }
-        public DateTime BirthTime
+        public DateTime? BirthTime
         {
-            get => DateTime.UnixEpoch.AddSeconds(archive_entry_birthtime(_handle)).ToLocalTime();
-            set => archive_entry_set_birthtime(
-                _handle,
-                (long)value.ToUniversalTime().Subtract(DateTime.UnixEpoch).TotalSeconds,
-                value.Nanosecond
-            );
+            get => archive_entry_birthtime_is_set(_handle) ? DateTime.UnixEpoch.AddSeconds(archive_entry_birthtime(_handle)).ToLocalTime() : null;
+            set
+            {
+                if (value == null) throw new ArgumentNullException(nameof(value));
+                var v = value.Value;
+                archive_entry_set_birthtime(
+                    _handle,
+                    (long)v.ToUniversalTime().Subtract(DateTime.UnixEpoch).TotalSeconds,
+                    v.Nanosecond
+                );
+            }
         }
-        public DateTime CreationTime
+        public DateTime? CreationTime
         {
-            get => DateTime.UnixEpoch.AddSeconds(archive_entry_ctime(_handle)).ToLocalTime();
-            set => archive_entry_set_ctime(
-                _handle,
-                (long)value.ToUniversalTime().Subtract(DateTime.UnixEpoch).TotalSeconds,
-                value.Nanosecond
-            );
+            get => archive_entry_ctime_is_set(_handle) ? DateTime.UnixEpoch.AddSeconds(archive_entry_ctime(_handle)).ToLocalTime() : null;
+            set
+            {
+                if (value == null) throw new ArgumentNullException(nameof(value));
+                var v = value.Value;
+                archive_entry_set_ctime(
+                    _handle,
+                    (long)v.ToUniversalTime().Subtract(DateTime.UnixEpoch).TotalSeconds,
+                    v.Nanosecond
+                );
+            }
         }
-        public DateTime LastWriteTime
+        public DateTime? LastWriteTime
         {
-            get => DateTime.UnixEpoch.AddSeconds(archive_entry_mtime(_handle)).ToLocalTime();
-            set => archive_entry_set_mtime(
-                _handle,
-                (long)value.ToUniversalTime().Subtract(DateTime.UnixEpoch).TotalSeconds,
-                value.Nanosecond);
-        }
-        public ArchiveEntryType FileType
-        {
-            get => archive_entry_filetype(_handle);
-            set => archive_entry_set_filetype(_handle, value);
+            get => archive_entry_mtime_is_set(_handle) ? DateTime.UnixEpoch.AddSeconds(archive_entry_mtime(_handle)).ToLocalTime() : null;
+            set
+            {
+                if (value == null) throw new ArgumentNullException(nameof(value));
+                var v = value.Value;
+                archive_entry_set_mtime(
+                    _handle,
+                    (long)v.ToUniversalTime().Subtract(DateTime.UnixEpoch).TotalSeconds,
+                    v.Nanosecond
+                );
+            }
         }
 
-        public long Inode
+        public ArchiveEntryType? FileType
         {
-            get => archive_entry_ino(_handle);
-            set => archive_entry_set_ino(_handle, value);
+            get => archive_entry_filetype_is_set(_handle) ? archive_entry_filetype(_handle) : null;
+            set
+            {
+                if (value == null) throw new ArgumentNullException(nameof(value));
+                archive_entry_set_filetype(_handle, value.Value);
+            }
         }
-        public uint Device
+
+        public long? Inode
         {
-            get => archive_entry_dev(_handle);
-            set => archive_entry_set_dev(_handle, value);
+            get => archive_entry_ino_is_set(_handle) ? archive_entry_ino(_handle) : null;
+            set
+            {
+                if (value == null) throw new ArgumentNullException(nameof(value));
+                archive_entry_set_ino(_handle, value.Value);
+            }
         }
-        public uint RootDevice
+        public uint? Device
         {
-            get => archive_entry_rdev(_handle);
-            set => archive_entry_set_rdev(_handle, value);
+            get => archive_entry_dev_is_set(_handle) ? archive_entry_dev(_handle) : null;
+            set
+            {
+                if (value == null) throw new ArgumentNullException(nameof(value));
+                archive_entry_set_dev(_handle, value.Value);
+            }
+        }
+        public uint? RootDevice
+        {
+            get => archive_entry_rdev_is_set(_handle) ? archive_entry_rdev(_handle) : null;
+            set
+            {
+                if (value == null) throw new ArgumentNullException(nameof(value));
+                archive_entry_set_rdev(_handle, value.Value);
+            }
         }
         public uint RootDeviceMajor
         {
@@ -180,15 +224,26 @@ namespace libarchive.Managed
             get => archive_entry_devminor(_handle);
             set => archive_entry_set_devminor(_handle, value);
         }
-        public long Uid
+        public long? Uid
         {
-            get => archive_entry_uid(_handle);
-            set => archive_entry_set_uid(_handle, value);
+            get => archive_entry_uid_is_set(_handle) ? archive_entry_uid(_handle) : null;
+            set
+            {
+                if (value == null) throw new ArgumentNullException(nameof(value));
+                archive_entry_set_uid(_handle, value.Value);
+            }
         }
-        public long Gid
+        public long? Gid
         {
-            get => archive_entry_gid(_handle);
-            set => archive_entry_set_gid(_handle, value);
+            get => archive_entry_gid_is_set(_handle) ? archive_entry_gid(_handle) : null;
+            set
+            {
+                if (value == null)
+                {
+                    throw new ArgumentNullException(nameof(value));
+                }
+                archive_entry_set_gid(_handle, value.Value);
+            }
         }
         public bool IsEncrypted
         {
@@ -200,19 +255,14 @@ namespace libarchive.Managed
             set => archive_entry_set_is_data_encrypted(_handle, (sbyte)(value ? 1 : 0));
         }
 
-        public bool HasSize => archive_entry_size_is_set(_handle) != 0;
-        public bool HasPerm => archive_entry_perm_is_set(_handle) != 0;
-        public bool HasDevice => archive_entry_dev_is_set(_handle) != 0;
-        public bool HasRootDevice => archive_entry_rdev_is_set(_handle) != 0;
-        public bool HasUid => archive_entry_uid_is_set(_handle) != 0;
-        public bool HasAccessTime => archive_entry_atime_is_set(_handle) != 0;
-        public bool HasBirthTime => archive_entry_birthtime_is_set(_handle) != 0;
-        public bool HasCreationTime => archive_entry_ctime_is_set(_handle) != 0;
-
-        public long Size
+        public long? Size
         {
-            get => archive_entry_size(_handle);
-            set => archive_entry_set_size(_handle, value);
+            get => archive_entry_size_is_set(_handle) ? archive_entry_size(_handle) : null;
+            set
+            {
+                if (value == null) throw new ArgumentNullException(nameof(value));
+                archive_entry_set_size(_handle, value.Value);
+            }
         }
         public ushort Mode
         {
@@ -239,5 +289,9 @@ namespace libarchive.Managed
         {
             return PathName;
         }
+
+        public ArchiveEntryXattrList Xattrs => new ArchiveEntryXattrList(_handle);
+        public ArchiveEntrySparseList Sparse => new ArchiveEntrySparseList(_handle);
+
     }
 }

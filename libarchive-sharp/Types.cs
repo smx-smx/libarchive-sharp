@@ -38,6 +38,63 @@ namespace libarchive
         NamedPipe = Constants.AE_IFIFO,
     }
 
+    public enum ArchiveFormat
+    {
+        BASE_MASK = 0xff0000,
+        CPIO = 0x10000,
+        CPIO_POSIX = (CPIO | 1),
+        CPIO_BIN_LE = (CPIO | 2),
+        CPIO_BIN_BE = (CPIO | 3),
+        CPIO_SVR4_NOCRC = (CPIO | 4),
+        CPIO_SVR4_CRC = (CPIO | 5),
+        CPIO_AFIO_LARGE = (CPIO | 6),
+        CPIO_PWB = (CPIO | 7),
+        SHAR = 0x20000,
+        SHAR_BASE = (SHAR | 1),
+        SHAR_DUMP = (SHAR | 2),
+        TAR = 0x30000,
+        TAR_USTAR = (TAR | 1),
+        TAR_PAX_INTERCHANGE = (TAR | 2),
+        TAR_PAX_RESTRICTED = (TAR | 3),
+        TAR_GNUTAR = (TAR | 4),
+        ISO9660 = 0x40000,
+        ISO9660_ROCKRIDGE = (ISO9660 | 1),
+        ZIP = 0x50000,
+        EMPTY = 0x60000,
+        AR = 0x70000,
+        AR_GNU = (AR | 1),
+        AR_BSD = (AR | 2),
+        MTREE = 0x80000,
+        RAW = 0x90000,
+        XAR = 0xA0000,
+        LHA = 0xB0000,
+        CAB = 0xC0000,
+        RAR = 0xD0000,
+        SEVENZIP = 0xE0000,
+        WARC = 0xF0000,
+        RAR_V5 = 0x100000,
+    }
+
+    public enum ArchiveFilter
+    {
+        NONE = 0,
+        GZIP = 1,
+        BZIP2 = 2,
+        COMPRESS = 3,
+        PROGRAM = 4,
+        LZMA = 5,
+        XZ = 6,
+        UU = 7,
+        RPM = 8,
+        LZIP = 9,
+        LRZIP = 10,
+        LZOP = 11,
+        GRZIP = 12,
+        LZ4 = 13,
+        ZSTD = 14
+    }
+
+
     [Flags]
     public enum ArchiveExtractFlags
     {
