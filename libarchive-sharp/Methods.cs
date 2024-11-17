@@ -1370,7 +1370,10 @@ public static unsafe partial class Methods
     public static extern void archive_entry_set_filetype(TypedPointer<archive_entry> entry, [NativeTypeName("unsigned int")] ArchiveEntryType type);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void archive_entry_set_fflags(TypedPointer<archive_entry> entry, [NativeTypeName("unsigned long")] uint param1, [NativeTypeName("unsigned long")] uint param2);
+    public static extern void archive_entry_set_fflags(
+        TypedPointer<archive_entry> entry,
+        [NativeTypeName("unsigned long")] uint set,
+        [NativeTypeName("unsigned long")] uint clear);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UnownedStr), MarshalCookie = UnownedStr.LPStr)]
@@ -1421,8 +1424,15 @@ public static unsafe partial class Methods
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern void archive_entry_set_ino64(TypedPointer<archive_entry> entry, [NativeTypeName("la_int64_t")] long param1);
 
+    /// <summary>
+    /// Set symlink if symlink is already set, else set hardlink.
+    /// </summary>
+    /// <param name="entry"></param>
+    /// <param name="target"></param>
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void archive_entry_set_link(TypedPointer<archive_entry> entry, [MarshalAs(UnmanagedType.LPStr)] string param1);
+    public static extern void archive_entry_set_link(
+        TypedPointer<archive_entry> entry,
+        [MarshalAs(UnmanagedType.LPStr)] string target);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern void archive_entry_set_link_utf8(TypedPointer<archive_entry> entry, [MarshalAs(UnmanagedType.LPStr)] string param1);
@@ -1449,7 +1459,9 @@ public static unsafe partial class Methods
     public static extern void archive_entry_unset_mtime(TypedPointer<archive_entry> entry);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void archive_entry_set_nlink(TypedPointer<archive_entry> entry, [NativeTypeName("unsigned int")] uint param1);
+    public static extern void archive_entry_set_nlink(
+        TypedPointer<archive_entry> entry,
+        [NativeTypeName("unsigned int")] uint nlink);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern void archive_entry_set_pathname(TypedPointer<archive_entry> entry, [MarshalAs(UnmanagedType.LPStr)] string param1);

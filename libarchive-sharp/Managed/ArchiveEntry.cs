@@ -85,16 +85,47 @@ namespace libarchive.Managed
             GC.SuppressFinalize(this);
         }
 
+        public string SourcePath
+        {
+            get => archive_entry_sourcepath_w(_handle);
+            set => archive_entry_copy_sourcepath_w(_handle, value);
+        }
+
+        public string UName
+        {
+            get => archive_entry_uname_w(_handle);
+            set => archive_entry_copy_uname_w(_handle, value);
+        }
+
+        public string GName
+        {
+            get => archive_entry_gname_w(_handle);
+            set => archive_entry_copy_gname_w(_handle, value);
+        }
+
         public string PathName
         {
             get => archive_entry_pathname_w(_handle);
             set => archive_entry_copy_pathname_w(_handle, value);
         }
+
+        public void SetLink(string target)
+        {
+            archive_entry_copy_link_w(Handle, target);
+        }
+
         public string SymLinkTarget
         {
             get => archive_entry_symlink_w(_handle);
             set => archive_entry_copy_symlink_w(_handle, value);
         }
+
+        public uint HardLinkCount
+        {
+            get => archive_entry_nlink(_handle);
+            set => archive_entry_set_nlink(_handle, value);
+        }
+
         public string HardLinkTarget
         {
             get => archive_entry_hardlink_w(_handle);
@@ -109,12 +140,22 @@ namespace libarchive.Managed
                 archive_entry_set_perm(_handle, value.Value);
             }
         }
+
+        public int AccessTimeNanoseconds
+        {
+            get => archive_entry_atime_nsec(_handle);
+        }
+
         public DateTime? AccessTime
         {
             get => archive_entry_atime_is_set(_handle) ? DateTime.UnixEpoch.AddSeconds(archive_entry_atime(_handle)).ToLocalTime() : null;
             set
             {
-                if (value == null) throw new ArgumentNullException(nameof(value));
+                if (value == null)
+                {
+                    archive_entry_unset_atime(_handle);
+                    return;
+                }
                 var v = value.Value;
                 archive_entry_set_atime(
                     _handle,
@@ -123,12 +164,22 @@ namespace libarchive.Managed
                 );
             }
         }
+
+        public int BirthTimeNanoseconds
+        {
+            get => archive_entry_birthtime_nsec(_handle);
+        }
+
         public DateTime? BirthTime
         {
             get => archive_entry_birthtime_is_set(_handle) ? DateTime.UnixEpoch.AddSeconds(archive_entry_birthtime(_handle)).ToLocalTime() : null;
             set
             {
-                if (value == null) throw new ArgumentNullException(nameof(value));
+                if (value == null)
+                {
+                    archive_entry_unset_birthtime(_handle);
+                    return;
+                }
                 var v = value.Value;
                 archive_entry_set_birthtime(
                     _handle,
@@ -137,12 +188,22 @@ namespace libarchive.Managed
                 );
             }
         }
+
+        public int CreationTimeNanoseconds
+        {
+            get => archive_entry_ctime_nsec(_handle);
+        }
+
         public DateTime? CreationTime
         {
             get => archive_entry_ctime_is_set(_handle) ? DateTime.UnixEpoch.AddSeconds(archive_entry_ctime(_handle)).ToLocalTime() : null;
             set
             {
-                if (value == null) throw new ArgumentNullException(nameof(value));
+                if (value == null)
+                {
+                    archive_entry_unset_ctime(_handle);
+                    return;
+                }
                 var v = value.Value;
                 archive_entry_set_ctime(
                     _handle,
@@ -151,12 +212,22 @@ namespace libarchive.Managed
                 );
             }
         }
+
+        public int LastWriteTimeNanoseconds
+        {
+            get => archive_entry_mtime_nsec(_handle);
+        }
+
         public DateTime? LastWriteTime
         {
             get => archive_entry_mtime_is_set(_handle) ? DateTime.UnixEpoch.AddSeconds(archive_entry_mtime(_handle)).ToLocalTime() : null;
             set
             {
-                if (value == null) throw new ArgumentNullException(nameof(value));
+                if (value == null)
+                {
+                    archive_entry_unset_mtime(_handle);
+                    return;
+                }
                 var v = value.Value;
                 archive_entry_set_mtime(
                     _handle,
@@ -260,7 +331,11 @@ namespace libarchive.Managed
             get => archive_entry_size_is_set(_handle) ? archive_entry_size(_handle) : null;
             set
             {
-                if (value == null) throw new ArgumentNullException(nameof(value));
+                if (value == null)
+                {
+                    archive_entry_unset_size(_handle);
+                    return;
+                }
                 archive_entry_set_size(_handle, value.Value);
             }
         }
@@ -270,13 +345,23 @@ namespace libarchive.Managed
             set => archive_entry_set_mode(_handle, value);
         }
 
-        public uint FileFlags
+        public uint FileFlagsSet
         {
             get
             {
                 archive_entry_fflags(_handle, out var set, out var _);
                 return set;
             }
+            set => archive_entry_set_fflags(_handle, FileFlagsClear, value);
+        }
+        public uint FileFlagsClear
+        {
+            get
+            {
+                archive_entry_fflags(_handle, out var _, out var clear);
+                return clear;
+            }
+            set => archive_entry_set_fflags(_handle, FileFlagsSet, value);
         }
 
         public string FileFlagsText
@@ -293,5 +378,12 @@ namespace libarchive.Managed
         public ArchiveEntryXattrList Xattrs => new ArchiveEntryXattrList(_handle);
         public ArchiveEntrySparseList Sparse => new ArchiveEntrySparseList(_handle);
 
+        public void Clear()
+        {
+            unsafe
+            {
+                archive_entry_clear(_handle);
+            }
+        }
     }
 }
