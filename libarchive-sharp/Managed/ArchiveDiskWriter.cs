@@ -21,7 +21,6 @@ namespace libarchive.Managed
     {
         private readonly TypedPointer<archive> _handle;
         private readonly bool _owned;
-        private bool _disposed;
         private readonly ArchiveOutputStream _outputStream;
 
         public ArchiveOutputStream OutputStream => _outputStream;
@@ -37,7 +36,6 @@ namespace libarchive.Managed
         {
             _handle = handle;
             _owned = owned;
-            _disposed = false;
             _outputStream = new ArchiveOutputStream(_handle);
 
             if (archive_write_disk_set_options(handle, flags) != ArchiveError.OK)

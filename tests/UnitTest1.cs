@@ -109,7 +109,7 @@ namespace tests
                 nameof(archive_entry_copy_sourcepath),
                 /// covered by <see cref="archive_entry_new2" />
                 nameof(archive_entry_new),
-                /// covered by <see cref="archive_read_open1"/ and <see cref="ArchiveReader">
+                /// covered by <see cref="archive_read_open1" /> and <see cref="ArchiveReader" />
                 nameof(archive_read_open),
                 nameof(archive_read_open2),
                 nameof(archive_read_open_filename),
@@ -121,6 +121,16 @@ namespace tests
                 nameof(archive_read_open_memory2),
                 nameof(archive_read_open_fd),
                 nameof(archive_read_open_FILE),
+                /// covered by <see cref="archive_write_open2" /> and <see cref="ArchiveWriter"/>
+                nameof(archive_write_open),
+                nameof(archive_write_open_fd),
+                nameof(archive_write_open_filename),
+                nameof(archive_write_open_filename_w),
+                nameof(archive_write_open_file),
+                nameof(archive_write_open_FILE),
+                nameof(archive_write_open_memory),
+                /// covered by <see cref="archive_entry_acl_from_text_w"/>
+                nameof(archive_entry_acl_from_text)
             }.Concat(deprecated);
 
 

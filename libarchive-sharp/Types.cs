@@ -26,6 +26,26 @@ namespace libarchive
         public const ushort AE_IFIFO = 0x1000;
     }
 
+    public enum ArchiveEntrySymlinkType : int
+    {
+        Undefined = 0,
+        File = 1,
+        Directory = 2
+    }
+
+    [Flags]
+    public enum ArchiveEntryAclType : int
+    {
+        Access = 0x00000100,
+        Default = 0x00000200,
+        Allow = 0x00000400,
+        Deny = 0x00000800,
+        Audit = 0x00001000,
+        Alarm = 0x00002000,
+        Posix1E = Access | Default,
+        Nfs4 = Allow | Deny | Audit | Alarm
+    }
+
     public enum ArchiveEntryType : ushort
     {
         Undefined = 0,

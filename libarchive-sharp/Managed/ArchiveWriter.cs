@@ -231,5 +231,46 @@ namespace libarchive.Managed
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+
+        public void SetFailure()
+        {
+            archive_write_fail(_handle);
+        }
+
+        public void SetFormatOption(string module, string option, string value)
+        {
+            var err = archive_write_set_format_option(_handle, module, option, value);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(nameof(archive_write_set_format_option), err);
+            }
+        }
+
+        public void SetFilterOption(string module, string option, string value)
+        {
+            var err = archive_write_set_filter_option(_handle, module, option, value);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(nameof(archive_write_set_filter_option), err);
+            }
+        }
+
+        public void SetOption(string module, string option, string value)
+        {
+            var err = archive_write_set_option(_handle, module, option, value);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(nameof(archive_write_set_option), err);
+            }
+        }
+
+        public void SetOptions(string options)
+        {
+            var err = archive_write_set_options(_handle, options);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(nameof(archive_write_set_options), err);
+            }
+        }
     }
 }

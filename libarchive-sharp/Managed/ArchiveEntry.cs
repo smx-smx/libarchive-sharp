@@ -318,12 +318,18 @@ namespace libarchive.Managed
         }
         public bool IsEncrypted
         {
-            get => archive_entry_is_encrypted(_handle) == 1;
+            get => archive_entry_is_encrypted(_handle);
         }
         public bool IsEncryptedData
         {
-            get => archive_entry_is_data_encrypted(_handle) == 1;
+            get => archive_entry_is_data_encrypted(_handle);
             set => archive_entry_set_is_data_encrypted(_handle, (sbyte)(value ? 1 : 0));
+        }
+
+        public bool IsEncryptedMetaData
+        {
+            get => archive_entry_is_metadata_encrypted(_handle);
+            set => archive_entry_set_is_metadata_encrypted(_handle, (sbyte)(value ? 1 : 0));
         }
 
         public long? Size
@@ -343,6 +349,11 @@ namespace libarchive.Managed
         {
             get => archive_entry_mode(_handle);
             set => archive_entry_set_mode(_handle, value);
+        }
+
+        public string ModeString
+        {
+            get => archive_entry_strmode(_handle);
         }
 
         public uint FileFlagsSet
@@ -370,13 +381,30 @@ namespace libarchive.Managed
             set => archive_entry_copy_fflags_text_w(_handle, value);
         }
 
+        public ArchiveEntrySymlinkType SymlinkType
+        {
+            get => archive_entry_symlink_type(_handle);
+            set => archive_entry_set_symlink_type(_handle, value);
+        }
+
         public override string ToString()
         {
             return PathName;
         }
 
+        public void SetAcl(string text, ArchiveEntryAclType type)
+        {
+            var err = archive_entry_acl_from_text_w(_handle, text, type);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(nameof(archive_entry_acl_from_text_w), err);
+            }
+        }
+
+        public ArchiveAcl Acl => new ArchiveAcl(_handle);
         public ArchiveEntryXattrList Xattrs => new ArchiveEntryXattrList(_handle);
         public ArchiveEntrySparseList Sparse => new ArchiveEntrySparseList(_handle);
+        public ArchiveEntryAclList GetAcls(ArchiveEntryAclType wantType) => new ArchiveEntryAclList(_handle, wantType);
 
         public void Clear()
         {
