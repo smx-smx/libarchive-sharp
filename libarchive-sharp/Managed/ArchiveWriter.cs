@@ -26,7 +26,7 @@ namespace libarchive.Managed
         public ArchiveFilter? Filter { get; set; } = null;
     }
 
-    public class ArchiveWriter : IDisposable
+    public class ArchiveWriter : Archive, IDisposable
     {
         private readonly TypedPointer<archive> _handle;
         private readonly bool _owned;
@@ -58,7 +58,7 @@ namespace libarchive.Managed
         public ArchiveWriter(
             TypedPointer<archive> handle,
             bool owned
-        )
+        ) : base(handle)
         {
             _handle = handle;
             _owned = owned;
@@ -79,7 +79,7 @@ namespace libarchive.Managed
             ArchiveFormat format,
             ICollection<ArchiveFilter>? filters = null,
             ArchiveCompression? compression = null
-        )
+        ) : base(handle)
         {
             _handle = handle;
             _owned = owned;

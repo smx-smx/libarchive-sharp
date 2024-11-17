@@ -43,7 +43,8 @@ namespace libarchive
         Audit = 0x00001000,
         Alarm = 0x00002000,
         Posix1E = Access | Default,
-        Nfs4 = Allow | Deny | Audit | Alarm
+        Nfs4 = Allow | Deny | Audit | Alarm,
+        All = -1
     }
 
     public enum ArchiveEntryType : ushort

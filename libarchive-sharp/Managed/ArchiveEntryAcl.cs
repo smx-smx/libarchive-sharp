@@ -6,9 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #endregion
-﻿using Smx.SharpIO.Memory;
+using Smx.SharpIO.Memory;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,99 +16,41 @@ using static libarchive.Methods;
 
 namespace libarchive.Managed
 {
-    public record ArchiveEntryAcl(int Type, int Permset, int Tag, int Qual, string Name);
-
-    public class ArchiveEntryAclList : ICollection<ArchiveEntryAcl>
+    public class ArchiveEntryAcl
     {
-        private const ArchiveEntryAclType ACL_ALL = (ArchiveEntryAclType)(-1);
+        private readonly TypedPointer<archive_entry> _entry;
+        private readonly TypedPointer<archive_acl> _handle;
 
-        private readonly TypedPointer<archive_entry> _handle;
-
-        public ArchiveEntryAclType AclTypeFlags { get; private set; }
-
-        public ArchiveEntryAclList(TypedPointer<archive_entry> handle, ArchiveEntryAclType want_type)
+        public ArchiveEntryAcl(TypedPointer<archive_entry> entry, TypedPointer<archive_acl> handle)
         {
+            _entry = entry;
             _handle = handle;
-            AclTypeFlags = want_type;
         }
 
-        public int GetCount(ArchiveEntryAclType type) => archive_entry_acl_count(_handle, type);
+        public ArchiveEntryAcl(TypedPointer<archive_entry> entry)
+            : this(entry, NewHandle(entry))
+        { }
 
-        public bool IsReadOnly => throw new NotImplementedException();
-
-        public int Count => GetCount(AclTypeFlags);
-
-        public void Add(ArchiveEntryAcl item)
+        private static TypedPointer<archive_acl> NewHandle(TypedPointer<archive_entry> entry)
         {
-            var err = archive_entry_acl_add_entry_w(_handle, item.Type, item.Permset, item.Tag, item.Qual, item.Name);
-            if (err != ArchiveError.OK)
+            var handle = archive_entry_acl(entry);
+            if (handle.Address == 0)
             {
-                throw new ArchiveOperationFailedException(nameof(archive_entry_acl_add_entry_w), err);
+                throw new ArchiveOperationFailedException(nameof(archive_entry_acl), "corrupted memory");
             }
+            return handle;
         }
 
-        public void Clear()
+        public ArchiveEntryAclType Types => archive_entry_acl_types(_entry);
+
+        public string ToString(ArchiveEntryAclType flags)
         {
-            archive_entry_acl_clear(_handle);
+            return archive_entry_acl_to_text_w(_entry, out var textLength, flags);
         }
 
-        private IEnumerable<ArchiveEntryAcl> ItemsEnumerable
+        public override string ToString()
         {
-            get
-            {
-                for (; ; )
-                {
-                    if (archive_entry_acl_next(_handle, AclTypeFlags,
-                        out var type, out var permset, out var tag,
-                        out var id, out var name
-                    ) != ArchiveError.OK) yield break;
-                    yield return new ArchiveEntryAcl(type, permset, tag, id, name);
-                }
-            }
-        }
-
-        private int IndexOf(ArchiveEntryAcl item)
-        {
-            var i = 0;
-            foreach (var x in ItemsEnumerable)
-            {
-                if (x.Qual == item.Qual && x.Name.Equals(item.Name)) return i;
-                ++i;
-            }
-            return -1;
-        }
-
-        public bool Contains(ArchiveEntryAcl item)
-        {
-            return IndexOf(item) >= -1;
-        }
-
-        public void CopyTo(ArchiveEntryAcl[] array, int arrayIndex)
-        {
-            foreach (var a in ItemsEnumerable)
-            {
-                array[arrayIndex++] = a;
-            }
-        }
-
-        public IEnumerator<ArchiveEntryAcl> GetEnumerator()
-        {
-            return ItemsEnumerable.GetEnumerator();
-        }
-
-        public bool Remove(ArchiveEntryAcl item)
-        {
-            throw new NotSupportedException();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-        public void Reset()
-        {
-            archive_entry_acl_reset(_handle, AclTypeFlags);
+            return archive_entry_acl_to_text_w(_entry, out var textLength, ArchiveEntryAclType.All);
         }
     }
 }

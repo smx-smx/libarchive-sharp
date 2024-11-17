@@ -36,15 +36,18 @@ namespace libarchive.Managed
         { }
     }
 
-    public class ArchiveReader : IDisposable
+    public class ArchiveReaderOptions
+    {
+        public ICollection<ArchiveFormat> EnableFormats { get; set; } = Array.Empty<ArchiveFormat>();
+        public ICollection<ArchiveFilter> EnableFilters { get; set; } = Array.Empty<ArchiveFilter>();
+    }
+
+    public class ArchiveReader : Archive, IDisposable
     {
         private readonly TypedPointer<archive> _handle;
         private bool _disposed = false;
         private readonly bool _owned;
         private readonly ArchiveInputStream _inputStream;
-
-        public int LastError => archive_errno(_handle);
-        public string LastErrorString => archive_error_string(_handle);
 
         private ArchiveDataStream _stream;
         private readonly Delegates.archive_read_callback _read_callback;
@@ -54,11 +57,13 @@ namespace libarchive.Managed
 
         public ArchiveInputStream InputStream => _inputStream;
 
-        public ArchiveReader(Stream stream)
-            : this(NewHandle(), new ArchiveDataStream(stream), true)
-        { }
+        public ArchiveReader(Stream stream, ArchiveReaderOptions? opts = null)
+            : this(NewHandle(opts), new ArchiveDataStream(stream), true)
+        {
+        }
 
         public ArchiveReader(TypedPointer<archive> handle, ArchiveDataStream stream, bool owned)
+            : base(handle)
         {
             _handle = handle;
             _stream = stream;
@@ -92,16 +97,29 @@ namespace libarchive.Managed
             }
         }
 
-        private static TypedPointer<archive> NewHandle()
+        private static TypedPointer<archive> NewHandle(ArchiveReaderOptions? opts = null)
         {
-            var arch = archive_read_new();
-            if (arch.Address == 0)
+            var handle = archive_read_new();
+            if (handle.Address == 0)
             {
                 throw new ArchiveOperationFailedException(nameof(archive_read_new), "out of memory");
             }
-            archive_read_support_format_all(arch);
-            archive_read_support_filter_all(arch);
-            return arch;
+            if (opts == null)
+            {
+                archive_read_support_format_all(handle);
+                archive_read_support_filter_all(handle);
+            } else
+            {
+                foreach (var format in opts.EnableFormats)
+                {
+                    archive_read_support_format_by_code(handle, format);
+                }
+                foreach (var filter in opts.EnableFilters)
+                {
+                    archive_read_support_filter_by_code(handle, filter);
+                }
+            }
+            return handle;
         }
 
         protected virtual void Dispose(bool disposing)

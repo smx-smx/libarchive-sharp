@@ -401,7 +401,7 @@ namespace libarchive.Managed
             }
         }
 
-        public ArchiveAcl Acl => new ArchiveAcl(_handle);
+        public ArchiveEntryAcl Acl => new ArchiveEntryAcl(_handle);
         public ArchiveEntryXattrList Xattrs => new ArchiveEntryXattrList(_handle);
         public ArchiveEntrySparseList Sparse => new ArchiveEntrySparseList(_handle);
         public ArchiveEntryAclList GetAcls(ArchiveEntryAclType wantType) => new ArchiveEntryAclList(_handle, wantType);

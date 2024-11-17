@@ -130,7 +130,42 @@ namespace tests
                 nameof(archive_write_open_FILE),
                 nameof(archive_write_open_memory),
                 /// covered by <see cref="archive_entry_acl_from_text_w"/>
-                nameof(archive_entry_acl_from_text)
+                nameof(archive_entry_acl_from_text),
+                /// covered by <see cref="archive_entry_acl_add_entry_w"/>
+                nameof(archive_entry_acl_add_entry),
+                /// covered by <see cref="archive_entry_acl_to_text_w"/>
+                nameof(archive_entry_acl_to_text),
+                /// covered by <see cref="archive_read_support_format_by_code" />
+                nameof(archive_read_support_format_7zip),
+                nameof(archive_read_support_format_ar),
+                nameof(archive_read_support_format_cab),
+                nameof(archive_read_support_format_cpio),
+                nameof(archive_read_support_format_empty),
+                nameof(archive_read_support_format_iso9660),
+                nameof(archive_read_support_format_lha),
+                nameof(archive_read_support_format_mtree),
+                nameof(archive_read_support_format_rar),
+                nameof(archive_read_support_format_rar5),
+                nameof(archive_read_support_format_raw),
+                nameof(archive_read_support_format_tar),
+                nameof(archive_read_support_format_warc),
+                nameof(archive_read_support_format_xar),
+                nameof(archive_read_support_format_zip),
+                /// covered by <see cref="read_support_filter_by_code" />
+                nameof(archive_read_support_filter_none),
+                nameof(archive_read_support_filter_gzip),
+                nameof(archive_read_support_filter_bzip2),
+                nameof(archive_read_support_filter_compress),
+                nameof(archive_read_support_filter_lzma),
+                nameof(archive_read_support_filter_xz),
+                nameof(archive_read_support_filter_uu),
+                nameof(archive_read_support_filter_rpm),
+                nameof(archive_read_support_filter_lzip),
+                nameof(archive_read_support_filter_lrzip),
+                nameof(archive_read_support_filter_lzop),
+                nameof(archive_read_support_filter_grzip),
+                nameof(archive_read_support_filter_lz4),
+                nameof(archive_read_support_filter_zstd),
             }.Concat(deprecated);
 
 
@@ -190,7 +225,11 @@ namespace tests
 
             File.WriteAllBytes("arch.tar.bz2", ms.ToArray());
 
-            var reader = new ArchiveReader(ms);
+            var reader = new ArchiveReader(ms, new ArchiveReaderOptions
+            {
+                EnableFormats = [ArchiveFormat.TAR_USTAR],
+                EnableFilters = [ArchiveFilter.BZIP2]
+            });
 
             File.Delete("file.txt");
 
@@ -206,6 +245,10 @@ namespace tests
 
             Assert.That(File.Exists("test.txt"));
             Assert.That(File.ReadAllText("test.txt"), Is.EqualTo("Hello world"));
+
+            reader.SetError(1234, "testing %s");
+            Assert.That(reader.LastError, Is.EqualTo(1234));
+            Assert.That(reader.LastErrorString, Is.EqualTo("testing %s"));
         }
     }
 }
