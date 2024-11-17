@@ -29,8 +29,6 @@ namespace libarchive.Managed
     public class ArchiveWriter : Archive, IDisposable
     {
         private readonly TypedPointer<archive> _handle;
-        private readonly bool _owned;
-        private bool _disposed;
 
         private ArchiveDataStream? _stream;
         private readonly Delegates.archive_open_callback? _open_callback;
@@ -58,10 +56,9 @@ namespace libarchive.Managed
         public ArchiveWriter(
             TypedPointer<archive> handle,
             bool owned
-        ) : base(handle)
+        ) : base(handle, owned)
         {
             _handle = handle;
-            _owned = owned;
         }
 
         private void AddFilter(ArchiveFilter filter)
@@ -79,10 +76,9 @@ namespace libarchive.Managed
             ArchiveFormat format,
             ICollection<ArchiveFilter>? filters = null,
             ArchiveCompression? compression = null
-        ) : base(handle)
+        ) : base(handle, owned)
         {
             _handle = handle;
-            _owned = owned;
             _disposed = false;
             _stream = stream;
 
@@ -204,7 +200,7 @@ namespace libarchive.Managed
             };
         }
 
-        protected virtual void Dispose(bool disposing)
+        protected override void Dispose(bool disposing)
         {
             if (_disposed) return;
             if (disposing)
@@ -226,7 +222,7 @@ namespace libarchive.Managed
             Dispose(false);
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);

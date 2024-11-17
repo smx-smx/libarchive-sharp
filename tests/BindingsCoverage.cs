@@ -6,14 +6,13 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #endregion
-﻿using Mono.Cecil;
+using Mono.Cecil;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Mono.Cecil;
 using static libarchive.Methods;
 
 namespace tests
@@ -153,6 +152,8 @@ namespace tests
                 nameof(archive_read_support_filter_grzip),
                 nameof(archive_read_support_filter_lz4),
                 nameof(archive_read_support_filter_zstd),
+                /// covered by <see cref="archive_entry_copy_pathname_w" />
+                nameof(archive_entry_copy_pathname)
             }.Concat(deprecated);
 
 

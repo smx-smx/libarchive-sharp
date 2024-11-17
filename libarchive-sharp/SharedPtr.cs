@@ -6,7 +6,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #endregion
-﻿using Smx.SharpIO.Memory;
+using Smx.SharpIO.Memory;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -48,10 +48,22 @@ namespace libarchive
 
         public void Release()
         {
-            if (Interlocked.Decrement(ref _refCount) == 0)
+            lock (_obj)
             {
-                _obj.Dispose();
-                _disposed = true;
+                if (_disposed)
+                {
+                    throw new InvalidOperationException("object already disposed");
+                }
+                if (_refCount == 0)
+                {
+                    // unowned object
+                    return;
+                }
+                if (--_refCount == 0)
+                {
+                    _obj.Dispose();
+                    _disposed = true;
+                }
             }
         }
     }

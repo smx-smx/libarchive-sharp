@@ -237,10 +237,10 @@ public static unsafe partial class Methods
     public static extern ArchiveError archive_read_support_format_zip_seekable(TypedPointer<archive> archive);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern ArchiveError archive_read_set_format(TypedPointer<archive> archive, int code);
+    public static extern ArchiveError archive_read_set_format(TypedPointer<archive> archive, ArchiveFormat code);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern ArchiveError archive_read_append_filter(TypedPointer<archive> archive, int code);
+    public static extern ArchiveError archive_read_append_filter(TypedPointer<archive> archive, ArchiveFilter code);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_read_append_filter_program(

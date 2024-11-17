@@ -45,8 +45,6 @@ namespace libarchive.Managed
     public class ArchiveReader : Archive, IDisposable
     {
         private readonly TypedPointer<archive> _handle;
-        private bool _disposed = false;
-        private readonly bool _owned;
         private readonly ArchiveInputStream _inputStream;
 
         private ArchiveDataStream _stream;
@@ -63,11 +61,10 @@ namespace libarchive.Managed
         }
 
         public ArchiveReader(TypedPointer<archive> handle, ArchiveDataStream stream, bool owned)
-            : base(handle)
+            : base(handle, owned)
         {
             _handle = handle;
             _stream = stream;
-            _owned = owned;
             _inputStream = new ArchiveInputStream(handle);
 
             // required to allocated client datasets, or we will crash
@@ -84,6 +81,24 @@ namespace libarchive.Managed
             archive_read_set_skip_callback(handle, _skip_callback);
             archive_read_set_close_callback(handle, _close_callback);
             archive_read_open1(handle);
+        }
+
+        public void SetFormat(ArchiveFormat format)
+        {
+            var err = archive_read_set_format(_handle, format);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(nameof(archive_read_set_format), err);
+            }
+        }
+
+        public void AppendFilter(ArchiveFilter filter)
+        {
+            var err = archive_read_append_filter(_handle, filter);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(nameof(archive_read_append_filter), err);
+            }
         }
 
         public IEnumerable<ArchiveEntry> Entries
@@ -122,7 +137,7 @@ namespace libarchive.Managed
             return handle;
         }
 
-        protected virtual void Dispose(bool disposing)
+        protected override void Dispose(bool disposing)
         {
             if (_disposed) return;
 
@@ -142,7 +157,7 @@ namespace libarchive.Managed
             Dispose(false);
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
