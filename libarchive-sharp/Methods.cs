@@ -60,30 +60,39 @@ public static unsafe partial class Methods
     [return: NativeTypeName("struct archive *")]
     public static extern TypedPointer<archive> archive_read_new();
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_read_support_compression_all(TypedPointer<archive> archive);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_read_support_compression_bzip2(TypedPointer<archive> archive);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_read_support_compression_compress(TypedPointer<archive> archive);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_read_support_compression_gzip(TypedPointer<archive> archive);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_read_support_compression_lzip(TypedPointer<archive> archive);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_read_support_compression_lzma(TypedPointer<archive> archive);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_read_support_compression_none(TypedPointer<archive> archive);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_read_support_compression_program(TypedPointer<archive> archive, [MarshalAs(UnmanagedType.LPStr)] string command);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_read_support_compression_program_signature(
         TypedPointer<archive> archive,
@@ -91,12 +100,15 @@ public static unsafe partial class Methods
         [NativeTypeName("const void *")] nint signature,
         [NativeTypeName("size_t")] nuint signature_length);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_read_support_compression_rpm(TypedPointer<archive> archive);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_read_support_compression_uu(TypedPointer<archive> archive);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_read_support_compression_xz(TypedPointer<archive> archive);
 
@@ -444,6 +456,7 @@ public static unsafe partial class Methods
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern int archive_read_free(TypedPointer<archive> archive);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern int archive_read_finish(TypedPointer<archive> archive);
 
@@ -466,27 +479,35 @@ public static unsafe partial class Methods
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern int archive_write_set_skip_file(TypedPointer<archive> archive, [NativeTypeName("la_int64_t")] long param1, [NativeTypeName("la_int64_t")] long param2);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_write_set_compression_bzip2(TypedPointer<archive> archive);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_write_set_compression_compress(TypedPointer<archive> archive);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_write_set_compression_gzip(TypedPointer<archive> archive);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_write_set_compression_lzip(TypedPointer<archive> archive);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_write_set_compression_lzma(TypedPointer<archive> archive);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_write_set_compression_none(TypedPointer<archive> archive);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_write_set_compression_program(TypedPointer<archive> archive, [MarshalAs(UnmanagedType.LPStr)] string cmd);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_write_set_compression_xz(TypedPointer<archive> archive);
 
@@ -703,6 +724,7 @@ public static unsafe partial class Methods
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_write_free(TypedPointer<archive> archive);
 
+    [Obsolete]
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern int archive_write_finish(TypedPointer<archive> archive);
 

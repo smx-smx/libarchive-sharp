@@ -101,7 +101,6 @@ namespace libarchive.Managed
             }
             archive_read_support_format_all(arch);
             archive_read_support_filter_all(arch);
-            archive_read_support_compression_all(arch);
             return arch;
         }
 

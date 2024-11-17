@@ -11,6 +11,7 @@ using libarchive.Managed;
 using Microsoft.VisualStudio.CodeCoverage;
 using Mono.Cecil;
 using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
 using static libarchive.Methods;
@@ -38,6 +39,12 @@ namespace tests
         {
             var all = typeof(libarchive.Methods)
                 .GetMethods(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public)
+                .Select(m => m.Name)
+                .ToHashSet();
+
+            var deprecated = typeof(libarchive.Methods)
+                .GetMethods(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public)
+                .Where(m => m.GetCustomAttribute<ObsoleteAttribute>() != null)
                 .Select(m => m.Name)
                 .ToHashSet();
 
@@ -101,8 +108,21 @@ namespace tests
                 nameof(archive_entry_sourcepath),
                 nameof(archive_entry_copy_sourcepath),
                 /// covered by <see cref="archive_entry_new2" />
-                nameof(archive_entry_new)
-            };
+                nameof(archive_entry_new),
+                /// covered by <see cref="archive_read_open1"/ and <see cref="ArchiveReader">
+                nameof(archive_read_open),
+                nameof(archive_read_open2),
+                nameof(archive_read_open_filename),
+                nameof(archive_read_open_filenames),
+                nameof(archive_read_open_filename_w),
+                nameof(archive_read_open_filenames_w),
+                nameof(archive_read_open_file),
+                nameof(archive_read_open_memory),
+                nameof(archive_read_open_memory2),
+                nameof(archive_read_open_fd),
+                nameof(archive_read_open_FILE),
+            }.Concat(deprecated);
+
 
             var asm = AssemblyDefinition.ReadAssembly("libarchive-sharp.dll");
 
@@ -123,6 +143,15 @@ namespace tests
             var pop = all.Except(excluded);
             var notCalled = string.Join(Environment.NewLine, pop.Except(called));
             File.WriteAllText("todo.txt", notCalled);
+
+            var deprecatedCalls = called.Intersect(deprecated);
+            if (deprecatedCalls.Any())
+            {
+                foreach (var call in deprecatedCalls)
+                {
+                    Console.Error.WriteLine($"[WARN] deprecated function used: {call}");
+                }
+            }
 
             var popCount = pop.Count();
             var coverage = (((double)called.Count / popCount) * 100).ToString("F2");

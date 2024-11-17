@@ -192,14 +192,14 @@ namespace libarchive.Managed
         {
             return compression switch
             {
-                ArchiveCompression.none => archive_write_set_compression_none,
-                ArchiveCompression.compress => archive_write_set_compression_compress,
-                ArchiveCompression.xz => archive_write_set_compression_xz,
-                ArchiveCompression.lzma => archive_write_set_compression_lzma,
+                ArchiveCompression.none => archive_write_add_filter_none,
+                ArchiveCompression.compress => archive_write_add_filter_compress,
+                ArchiveCompression.xz => archive_write_add_filter_xz,
+                ArchiveCompression.lzma => archive_write_add_filter_lzma,
                 // $FIXME
                 //ArchiveCompression.program => archive_write_set_compression_program,
-                ArchiveCompression.lzip => archive_write_set_compression_lzip,
-                ArchiveCompression.bzip2 => archive_write_set_compression_bzip2,
+                ArchiveCompression.lzip => archive_write_add_filter_lzip,
+                ArchiveCompression.bzip2 => archive_write_add_filter_bzip2,
                 _ => throw new NotSupportedException(Enum.GetName(compression))
             };
         }
