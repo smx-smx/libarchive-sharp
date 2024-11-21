@@ -18,6 +18,15 @@ namespace libarchive.Managed
 {
     public class Archive : IDisposable
     {
+        public static int VersionNumber => archive_version_number();
+        public static string VersionString => archive_version_string();
+        public static string VersionDetails => archive_version_details();
+        public static string VersionZlib => archive_zlib_version();
+        public static string VersionLzma => archive_liblzma_version();
+        public static string VersionBzlib => archive_bzlib_version();
+        public static string VersionLz4 => archive_liblz4_version();
+        public static string VersionZstd => archive_libzstd_version();
+
         private readonly TypedPointer<archive> _handle;
         protected bool _disposed;
         protected readonly bool _owned;
@@ -28,8 +37,21 @@ namespace libarchive.Managed
             _owned = owned;
         }
 
+        public void CopyError(TypedPointer<archive> from)
+        {
+            archive_copy_error(_handle, from);
+        }
+
         public int LastError => archive_errno(_handle);
         public string LastErrorString => archive_error_string(_handle);
+
+        public ArchiveFormat Format => archive_format(_handle);
+        public string FormatName => archive_format_name(_handle);
+        public ArchiveCompression Compression => archive_compression(_handle);
+        public string CompressionName => archive_compression_name(_handle);
+
+        public long PositionCompressed => archive_position_compressed(_handle);
+        public long PositionUncompressed => archive_position_uncompressed(_handle);
 
         public void SetError(int errorNumber, string errorMessage)
         {

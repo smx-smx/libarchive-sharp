@@ -20,7 +20,9 @@ public enum ArchiveError
     RETRY = -10,
     WARN = -20,
     FAILED = -25,
-    FATAL = -30
+    FATAL = -30,
+    ARCHIVE_READ_FORMAT_ENCRYPTION_DONT_KNOW = -1,
+    ARCHIVE_READ_FORMAT_ENCRYPTION_UNSUPPORTED = -2
 }
 
 public static unsafe partial class Methods
@@ -376,7 +378,7 @@ public static unsafe partial class Methods
     public static extern long archive_read_header_position(TypedPointer<archive> archive);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_read_has_encrypted_entries(TypedPointer<archive> archive);
+    public static extern ArchiveError archive_read_has_encrypted_entries(TypedPointer<archive> archive);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern int archive_read_format_capabilities(TypedPointer<archive> archive);
@@ -406,7 +408,7 @@ public static unsafe partial class Methods
     public static extern int archive_read_data_skip(TypedPointer<archive> archive);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_read_data_into_fd(TypedPointer<archive> archive, int fd);
+    public static extern ArchiveError archive_read_data_into_fd(TypedPointer<archive> archive, int fd);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_read_set_format_option(
@@ -433,7 +435,9 @@ public static unsafe partial class Methods
     public static extern ArchiveError archive_read_set_options(TypedPointer<archive> archive, [MarshalAs(UnmanagedType.LPStr)] string opts);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_read_add_passphrase(TypedPointer<archive> archive, [MarshalAs(UnmanagedType.LPStr)] string param1);
+    public static extern ArchiveError archive_read_add_passphrase(
+        TypedPointer<archive> archive,
+        [MarshalAs(UnmanagedType.LPStr)] string passphrase);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern int archive_read_set_passphrase_callback(
@@ -469,13 +473,13 @@ public static unsafe partial class Methods
     public static extern TypedPointer<archive> archive_write_new();
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_write_set_bytes_per_block(TypedPointer<archive> archive, int bytes_per_block);
+    public static extern ArchiveError archive_write_set_bytes_per_block(TypedPointer<archive> archive, int bytes_per_block);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern int archive_write_get_bytes_per_block(TypedPointer<archive> archive);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_write_set_bytes_in_last_block(TypedPointer<archive> archive, int bytes_in_last_block);
+    public static extern ArchiveError archive_write_set_bytes_in_last_block(TypedPointer<archive> archive, int bytes_in_last_block);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern int archive_write_get_bytes_in_last_block(TypedPointer<archive> archive);
@@ -923,7 +927,7 @@ public static unsafe partial class Methods
     public static extern string archive_compression_name(TypedPointer<archive> archive);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_compression(TypedPointer<archive> archive);
+    public static extern ArchiveCompression archive_compression(TypedPointer<archive> archive);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern int archive_errno(TypedPointer<archive> archive);
@@ -937,7 +941,7 @@ public static unsafe partial class Methods
     public static extern string archive_format_name(TypedPointer<archive> archive);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_format(TypedPointer<archive> archive);
+    public static extern ArchiveFormat archive_format(TypedPointer<archive> archive);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern void archive_clear_error(TypedPointer<archive> archive);
@@ -969,7 +973,7 @@ public static unsafe partial class Methods
     public static extern int archive_match_path_excluded(TypedPointer<archive> archive, TypedPointer<archive_entry> entry);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_match_set_inclusion_recursion(TypedPointer<archive> archive, int enabled);
+    public static extern ArchiveError archive_match_set_inclusion_recursion(TypedPointer<archive> archive, int enabled);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern int archive_match_exclude_pattern(
@@ -977,7 +981,7 @@ public static unsafe partial class Methods
         [MarshalAs(UnmanagedType.LPStr)] string pattern);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_match_exclude_pattern_w(
+    public static extern ArchiveError archive_match_exclude_pattern_w(
         TypedPointer<archive> archive,
         [MarshalAs(UnmanagedType.LPWStr)] string pattern);
 
@@ -988,7 +992,7 @@ public static unsafe partial class Methods
         int nullSeparator);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_match_exclude_pattern_from_file_w(
+    public static extern ArchiveError archive_match_exclude_pattern_from_file_w(
         TypedPointer<archive> archive,
         [MarshalAs(UnmanagedType.LPWStr)] string pathname,
         int nullSeparator);
@@ -999,7 +1003,7 @@ public static unsafe partial class Methods
         [MarshalAs(UnmanagedType.LPStr)] string pattern);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_match_include_pattern_w(
+    public static extern ArchiveError archive_match_include_pattern_w(
         TypedPointer<archive> archive,
         [MarshalAs(UnmanagedType.LPWStr)] string pattern);
 
@@ -1010,7 +1014,7 @@ public static unsafe partial class Methods
         int nullSeparator);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_match_include_pattern_from_file_w(
+    public static extern ArchiveError archive_match_include_pattern_from_file_w(
         TypedPointer<archive> archive,
         [MarshalAs(UnmanagedType.LPWStr)] string pathname,
         int nullSeparator);
@@ -1024,9 +1028,10 @@ public static unsafe partial class Methods
         TypedPointer<string_array_ansi> param1);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_match_path_unmatched_inclusions_next_w(
+    public static extern ArchiveError archive_match_path_unmatched_inclusions_next_w(
         TypedPointer<archive> archive,
-        TypedPointer<string_array_unicode> param1);
+        [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UnownedStr), MarshalCookie = UnownedStr.LPWStr)]
+        out string p);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern int archive_match_time_excluded(
@@ -1034,40 +1039,40 @@ public static unsafe partial class Methods
         TypedPointer<archive_entry> entry);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_match_include_time(
+    public static extern ArchiveError archive_match_include_time(
         TypedPointer<archive> archive,
-        int flag,
+        ArchiveMatchFlags flag,
         [NativeTypeName("time_t")] long sec,
         [NativeTypeName("long")] int nsec);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern int archive_match_include_date(
         TypedPointer<archive> archive,
-        int flag,
+        ArchiveMatchFlags flag,
         [MarshalAs(UnmanagedType.LPStr)] string datestr);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_match_include_date_w(
+    public static extern ArchiveError archive_match_include_date_w(
         TypedPointer<archive> archive,
-        int flag,
+        ArchiveMatchFlags flag,
         [MarshalAs(UnmanagedType.LPWStr)] string datestr);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern int archive_match_include_file_time(
         TypedPointer<archive> archive,
-        int flag,
+        ArchiveMatchFlags flag,
         [MarshalAs(UnmanagedType.LPStr)] string pathname);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_match_include_file_time_w(
+    public static extern ArchiveError archive_match_include_file_time_w(
         TypedPointer<archive> archive,
-        int flag,
+        ArchiveMatchFlags flag,
         [MarshalAs(UnmanagedType.LPWStr)] string pathname);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_match_exclude_entry(
+    public static extern ArchiveError archive_match_exclude_entry(
         TypedPointer<archive> archive,
-        int flag,
+        ArchiveMatchFlags flag,
         TypedPointer<archive_entry> entry);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
@@ -1076,12 +1081,12 @@ public static unsafe partial class Methods
         TypedPointer<archive_entry> entry);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_match_include_uid(
+    public static extern ArchiveError archive_match_include_uid(
         TypedPointer<archive> archive,
         [NativeTypeName("la_int64_t")] long uid);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_match_include_gid(
+    public static extern ArchiveError archive_match_include_gid(
         TypedPointer<archive> archive,
         [NativeTypeName("la_int64_t")] long gid);
 
@@ -1091,7 +1096,7 @@ public static unsafe partial class Methods
         [MarshalAs(UnmanagedType.LPStr)] string uname);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_match_include_uname_w(
+    public static extern ArchiveError archive_match_include_uname_w(
         TypedPointer<archive> archive,
         [MarshalAs(UnmanagedType.LPWStr)] string uname);
 
@@ -1101,7 +1106,7 @@ public static unsafe partial class Methods
         [MarshalAs(UnmanagedType.LPStr)] string gname);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_match_include_gname_w(
+    public static extern ArchiveError archive_match_include_gname_w(
         TypedPointer<archive> archive,
         [MarshalAs(UnmanagedType.LPWStr)] string gname);
 
@@ -1592,7 +1597,9 @@ public static unsafe partial class Methods
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: NativeTypeName("const void *")]
-    public static extern void* archive_entry_mac_metadata(TypedPointer<archive_entry> entry, [NativeTypeName("size_t *")] nuint* param1);
+    public static extern nint archive_entry_mac_metadata(
+        TypedPointer<archive_entry> entry,
+        [NativeTypeName("size_t *")] out nuint s);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern void archive_entry_copy_mac_metadata(TypedPointer<archive_entry> entry, [NativeTypeName("const void *")] void* param1, [NativeTypeName("size_t")] nuint param2);

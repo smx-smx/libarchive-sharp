@@ -31,6 +31,7 @@ namespace tests
             }
         }
 
+
         [Test]
         public void Test1()
         {
@@ -53,7 +54,11 @@ namespace tests
 
             File.WriteAllBytes("arch.tar.bz2", ms.ToArray());
 
-            var reader = new ArchiveReader(ms, new ArchiveReaderOptions
+            var msLazy = new Lazy<Stream>(() => ms);
+
+            var reader = new ArchiveReader(new List<Lazy<Stream>> {
+                msLazy
+            }, new ArchiveReaderOptions
             {
                 EnableFormats = [ArchiveFormat.TAR_USTAR],
                 EnableFilters = [ArchiveFilter.BZIP2]

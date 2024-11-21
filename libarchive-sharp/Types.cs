@@ -59,6 +59,41 @@ namespace libarchive
         NamedPipe = Constants.AE_IFIFO,
     }
 
+    public class ArchiveFormatNames
+    {
+        public const string SevenZip = "7zip";
+        public const string Ar = "ar";
+        public const string ArBsd = "arbsd";
+        public const string ArGnu = "argnu";
+        public const string ArSvr4 = "arsvr4";
+        public const string Bin = "bin";
+        public const string BsdTar = "bsdtar";
+        public const string Cd9660 = "cd9660";
+        public const string Cpio = "cpio";
+        public const string GnuTar = "gnutar";
+        public const string Iso = "iso";
+        public const string Iso9660 = "iso9660";
+        public const string Mtree = "mtree";
+        public const string MtreeClassic = "mtree-classic";
+        public const string NewC = "newc";
+        public const string Odc = "odc";
+        public const string OldTar = "oldtar";
+        public const string Pax = "pax";
+        public const string Paxr = "paxr";
+        public const string Posix = "posix";
+        public const string Pwb = "pwb";
+        public const string Raw = "raw";
+        public const string Rpax = "rpax";
+        public const string Shar = "shar";
+        public const string SharDump = "shardump";
+        public const string UsTar = "ustar";
+        public const string V7Tar = "v7tar";
+        public const string V7 = "v7";
+        public const string Warc = "warc";
+        public const string Xar = "xar";
+        public const string Zip = "zip";
+    }
+
     public enum ArchiveFormat
     {
         BASE_MASK = 0xff0000,
@@ -115,6 +150,28 @@ namespace libarchive
         ZSTD = 14
     }
 
+    public enum ArchiveMatchTimeFlag
+    {
+        MTIME = 0x0100,
+        CTIME = 0x0200,
+    }
+
+    public enum ArchiveMatchComparisonFlag
+    {
+        NEWER = 0x0001,
+        OLDER = 0x0002,
+        EQUAL = 0x0010
+    }
+
+    [Flags]
+    public enum ArchiveMatchFlags
+    {
+        MTIME = 0x0100,
+        CTIME = 0x0200,
+        NEWER = 0x0001,
+        OLDER = 0x0002,
+        EQUAL = 0x0010
+    }
 
     [Flags]
     public enum ArchiveExtractFlags

@@ -13,6 +13,8 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security.Claims;
+using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
 using static libarchive.Methods;
@@ -91,13 +93,13 @@ namespace libarchive.Managed
             set => archive_entry_copy_sourcepath_w(_handle, value);
         }
 
-        public string UName
+        public string UserName
         {
             get => archive_entry_uname_w(_handle);
             set => archive_entry_copy_uname_w(_handle, value);
         }
 
-        public string GName
+        public string GroupName
         {
             get => archive_entry_gname_w(_handle);
             set => archive_entry_copy_gname_w(_handle, value);
@@ -247,6 +249,12 @@ namespace libarchive.Managed
             }
         }
 
+        public long Inode64
+        {
+            get => archive_entry_ino64(_handle);
+            set => archive_entry_set_ino64(_handle, value);
+        }
+
         public long? Inode
         {
             get => archive_entry_ino_is_set(_handle) ? archive_entry_ino(_handle) : null;
@@ -387,6 +395,21 @@ namespace libarchive.Managed
             set => archive_entry_set_symlink_type(_handle, value);
         }
 
+        public Memory<byte> MacMetadata
+        {
+            get
+            {
+                var dptr = archive_entry_mac_metadata(_handle, out nuint size);
+                if (dptr == 0)
+                {
+                    throw new ArchiveOperationFailedException(nameof(archive_entry_mac_metadata), "corrupted memory");
+                }
+                var mem = new byte[size];
+                Marshal.Copy(dptr, mem, 0, mem.Length);
+                return mem;
+            }
+        }
+
         public override string ToString()
         {
             return PathName;
@@ -397,7 +420,7 @@ namespace libarchive.Managed
             var err = archive_entry_acl_from_text_w(_handle, text, type);
             if (err != ArchiveError.OK)
             {
-                throw new ArchiveOperationFailedException(nameof(archive_entry_acl_from_text_w), err);
+                throw new ArchiveOperationFailedException(_archive, nameof(archive_entry_acl_from_text_w), err);
             }
         }
 

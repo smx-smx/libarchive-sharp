@@ -38,27 +38,39 @@ namespace tests
             {
                 /// covered by <see cref="archive_write_set_format"/>
                 nameof(archive_write_set_format_7zip),
-                nameof(archive_write_set_format_ar_bsd),
-                nameof(archive_write_set_format_ar_svr4),
                 nameof(archive_write_set_format_cpio),
                 nameof(archive_write_set_format_cpio_bin),
-                nameof(archive_write_set_format_cpio_newc),
-                nameof(archive_write_set_format_cpio_odc),
                 nameof(archive_write_set_format_cpio_pwb),
-                nameof(archive_write_set_format_gnutar),
+                nameof(archive_write_set_format_cpio_odc),
+                nameof(archive_write_set_format_cpio_newc),
                 nameof(archive_write_set_format_iso9660),
                 nameof(archive_write_set_format_mtree),
-                nameof(archive_write_set_format_mtree_classic),
-                nameof(archive_write_set_format_pax),
-                nameof(archive_write_set_format_pax_restricted),
                 nameof(archive_write_set_format_raw),
                 nameof(archive_write_set_format_shar),
+                nameof(archive_write_set_format_shar),
                 nameof(archive_write_set_format_shar_dump),
+                nameof(archive_write_set_format_pax_restricted),
+                nameof(archive_write_set_format_gnutar),
+                nameof(archive_write_set_format_pax),
+                nameof(archive_write_set_format_pax_restricted),
                 nameof(archive_write_set_format_ustar),
-                nameof(archive_write_set_format_v7tar),
                 nameof(archive_write_set_format_warc),
                 nameof(archive_write_set_format_xar),
                 nameof(archive_write_set_format_zip),
+                /// covered by <see cref="archive_write_add_filter" />
+                nameof(archive_write_add_filter_none),
+                nameof(archive_write_add_filter_gzip),
+                nameof(archive_write_add_filter_bzip2),
+                nameof(archive_write_add_filter_compress),
+                nameof(archive_write_add_filter_grzip),
+                nameof(archive_write_add_filter_lrzip),
+                nameof(archive_write_add_filter_lz4),
+                nameof(archive_write_add_filter_lzip),
+                nameof(archive_write_add_filter_lzma),
+                nameof(archive_write_add_filter_lzip),
+                nameof(archive_write_add_filter_uuencode),
+                nameof(archive_write_add_filter_xz),
+                nameof(archive_write_add_filter_zstd),
                 /// covered by <see cref="archive_entry_hardlink_w" />
                 nameof(archive_entry_hardlink),
                 nameof(archive_entry_hardlink_utf8),
@@ -80,6 +92,8 @@ namespace tests
                 nameof(archive_entry_uname),
                 nameof(archive_entry_uname_utf8),
                 nameof(archive_entry_set_uname),
+                nameof(archive_entry_set_uname_utf8),
+                nameof(archive_entry_copy_uname_w),
                 /// covered by <see cref="archive_entry_gname_w" />
                 nameof(archive_entry_gname),
                 nameof(archive_entry_gname_utf8),
@@ -153,9 +167,35 @@ namespace tests
                 nameof(archive_read_support_filter_lz4),
                 nameof(archive_read_support_filter_zstd),
                 /// covered by <see cref="archive_entry_copy_pathname_w" />
-                nameof(archive_entry_copy_pathname)
+                nameof(archive_entry_copy_pathname),
+                /// covered by <see cref="archive_match_include_gname_w"/>
+                nameof(archive_match_include_gname),
+                /// covered by <see cref="archive_match_include_uname_w" />
+                nameof(archive_match_include_uname),
+                /// covered by <see cref="archive_match_exclude_pattern_w" />
+                nameof(archive_match_exclude_pattern),
+                /// covered by <see cref="archive_match_include_pattern_w" />
+                nameof(archive_match_include_pattern),
+                /// covered by <see cref="archive_match_exclude_pattern_from_file_w" />
+                nameof(archive_match_exclude_pattern_from_file),
+                /// covered by <see cref="archive_match_include_pattern_from_file_w" />
+                nameof(archive_match_include_pattern_from_file),
+                /// covered by <see cref="archive_match_include_date_w" />
+                nameof(archive_match_include_date),
+                /// covered by <see cref="archive_entry_copy_fflags_text_w" />
+                nameof(archive_entry_copy_fflags_text),
+                // exclude multi-encoding string updates (we always use Unicode)
+                nameof(archive_entry_update_gname_utf8),
+                nameof(archive_entry_update_hardlink_utf8),
+                nameof(archive_entry_update_link_utf8),
+                nameof(archive_entry_update_pathname_utf8),
+                nameof(archive_entry_update_symlink_utf8),
+                nameof(archive_entry_update_uname_utf8),
+                /// covered by <see cref="archive_match_include_file_time_w" />
+                nameof(archive_match_include_file_time),
+                /// covered by <see cref="archive_match_path_unmatched_inclusions_next_w" />
+                nameof(archive_match_path_unmatched_inclusions_next)
             }.Concat(deprecated);
-
 
             var asm = AssemblyDefinition.ReadAssembly("libarchive-sharp.dll");
 

@@ -30,11 +30,41 @@ namespace libarchive.Managed
     {
         private readonly TypedPointer<archive> _handle;
 
-        private ArchiveDataStream? _stream;
-        private readonly Delegates.archive_open_callback? _open_callback;
-        private readonly Delegates.archive_write_callback? _write_callback;
-        private readonly Delegates.archive_close_callback? _close_callback;
-        private readonly Delegates.archive_free_callback? _free_callback;
+        private Delegates.archive_open_callback? _open_callback;
+        private Delegates.archive_write_callback? _write_callback;
+        private Delegates.archive_close_callback? _close_callback;
+        private Delegates.archive_free_callback? _free_callback;
+
+        public int BytesPerBlock
+        {
+            get => archive_write_get_bytes_per_block(_handle);
+            set
+            {
+                var err = archive_write_set_bytes_per_block(_handle, value);
+                if (err != ArchiveError.OK)
+                {
+                    throw new ArchiveOperationFailedException(_handle, nameof(archive_write_set_bytes_per_block), err);
+                }
+            }
+        }
+
+        public int BytesInLastBlock
+        {
+            get => archive_write_get_bytes_in_last_block(_handle);
+            set
+            {
+                var err = archive_write_set_bytes_in_last_block(_handle, value);
+                if (err != ArchiveError.OK)
+                {
+                    throw new ArchiveOperationFailedException(_handle, nameof(archive_write_set_bytes_in_last_block), err);
+                }
+            }
+        }
+
+        public ArchiveWriter(TypedPointer<archive> handle, bool owned)
+            : base(handle, owned)
+        {
+        }
 
         public ArchiveWriter(
             Stream stream,
@@ -53,12 +83,28 @@ namespace libarchive.Managed
             )
         { }
 
-        public ArchiveWriter(
-            TypedPointer<archive> handle,
-            bool owned
-        ) : base(handle, owned)
+        private void SetFormat(string format)
         {
-            _handle = handle;
+            if (archive_write_set_format_by_name(_handle, format) != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_set_format_by_name), "failed to set archive format");
+            }
+        }
+
+        private void SetFormat(ArchiveFormat format)
+        {
+            if (archive_write_set_format(_handle, format) != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_set_format), "failed to set archive format");
+            }
+        }
+
+        private void AddFilter(string filter)
+        {
+            if (archive_write_add_filter_by_name(_handle, filter) != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_add_filter_by_name), "failed to add archive filter");
+            }
         }
 
         private void AddFilter(ArchiveFilter filter)
@@ -69,31 +115,8 @@ namespace libarchive.Managed
             }
         }
 
-        public ArchiveWriter(
-            TypedPointer<archive> handle,
-            ArchiveDataStream stream,
-            bool owned,
-            ArchiveFormat format,
-            ICollection<ArchiveFilter>? filters = null,
-            ArchiveCompression? compression = null
-        ) : base(handle, owned)
+        private void Setup(ArchiveDataStream stream)
         {
-            _handle = handle;
-            _disposed = false;
-            _stream = stream;
-
-            if (archive_write_set_format(handle, format) != ArchiveError.OK)
-            {
-                throw new ArchiveOperationFailedException(handle, nameof(GetArchiveCompressionSetter), "failed to set archive format");
-            }
-            if (filters != null)
-            {
-                foreach (var filter in filters)
-                {
-                    AddFilter(filter);
-                }
-            }
-
             _open_callback = (arch, data) => ArchiveError.OK;
             _write_callback = (arch, data, buff, len) =>
             {
@@ -112,12 +135,66 @@ namespace libarchive.Managed
             _free_callback = (arch, data) => ArchiveError.OK;
 
             archive_write_open2(
-                handle, 0,
+                _handle, 0,
                 archive_open_callback: _open_callback,
                 archive_write_callback: _write_callback,
                 archive_close_callback: _close_callback,
                 archive_free_callback: _free_callback
             );
+        }
+
+        private ArchiveWriter(
+            TypedPointer<archive> handle,
+            ArchiveDataStream stream,
+            bool owned
+        ) : base(handle, owned)
+        {
+            _handle = handle;
+            _disposed = false;
+        }
+
+        public ArchiveWriter(
+            TypedPointer<archive> handle,
+            ArchiveDataStream stream,
+            bool owned,
+            string format,
+            ICollection<string>? filters = null,
+            ArchiveCompression? compression = null
+        ) : this(handle, stream, owned)
+        {
+            archive_write_set_format_by_name(_handle, format);
+            if (filters != null)
+            {
+                foreach (var filter in filters)
+                {
+                    AddFilter(filter);
+                }
+            }
+            Setup(stream);
+        }
+
+        public ArchiveWriter(
+            TypedPointer<archive> handle,
+            ArchiveDataStream stream,
+            bool owned,
+            ArchiveFormat format,
+            ICollection<ArchiveFilter>? filters = null,
+            ArchiveCompression? compression = null
+        ) : this(handle, stream, owned)
+        {
+            var res = archive_write_set_format(handle, format);
+            if (res != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(handle, nameof(archive_write_set_format), res);
+            }
+            if (filters != null)
+            {
+                foreach (var filter in filters)
+                {
+                    AddFilter(filter);
+                }
+            }
+            Setup(stream);
         }
 
         public void AddEntry(SharedPtr<ArchiveEntry> entryRef, Stream? stream = null)
@@ -184,22 +261,6 @@ namespace libarchive.Managed
             return handle;
         }
 
-        private static Func<TypedPointer<archive>, ArchiveError> GetArchiveCompressionSetter(ArchiveCompression compression)
-        {
-            return compression switch
-            {
-                ArchiveCompression.none => archive_write_add_filter_none,
-                ArchiveCompression.compress => archive_write_add_filter_compress,
-                ArchiveCompression.xz => archive_write_add_filter_xz,
-                ArchiveCompression.lzma => archive_write_add_filter_lzma,
-                // $FIXME
-                //ArchiveCompression.program => archive_write_set_compression_program,
-                ArchiveCompression.lzip => archive_write_add_filter_lzip,
-                ArchiveCompression.bzip2 => archive_write_add_filter_bzip2,
-                _ => throw new NotSupportedException(Enum.GetName(compression))
-            };
-        }
-
         protected override void Dispose(bool disposing)
         {
             if (_disposed) return;
@@ -238,7 +299,7 @@ namespace libarchive.Managed
             var err = archive_write_set_format_option(_handle, module, option, value);
             if (err != ArchiveError.OK)
             {
-                throw new ArchiveOperationFailedException(nameof(archive_write_set_format_option), err);
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_set_format_option), err);
             }
         }
 
@@ -247,7 +308,7 @@ namespace libarchive.Managed
             var err = archive_write_set_filter_option(_handle, module, option, value);
             if (err != ArchiveError.OK)
             {
-                throw new ArchiveOperationFailedException(nameof(archive_write_set_filter_option), err);
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_set_filter_option), err);
             }
         }
 
@@ -256,7 +317,7 @@ namespace libarchive.Managed
             var err = archive_write_set_option(_handle, module, option, value);
             if (err != ArchiveError.OK)
             {
-                throw new ArchiveOperationFailedException(nameof(archive_write_set_option), err);
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_set_option), err);
             }
         }
 
@@ -265,7 +326,7 @@ namespace libarchive.Managed
             var err = archive_write_set_options(_handle, options);
             if (err != ArchiveError.OK)
             {
-                throw new ArchiveOperationFailedException(nameof(archive_write_set_options), err);
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_set_options), err);
             }
         }
     }

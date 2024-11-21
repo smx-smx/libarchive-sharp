@@ -6,7 +6,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #endregion
-﻿using Smx.SharpIO;
+using Smx.SharpIO;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +17,50 @@ using System.Threading.Tasks;
 
 namespace libarchive.Managed
 {
+    public class ArchiveDataStreamLazy : IArchiveStream, IDisposable
+    {
+        private bool _disposed;
+        private readonly Lazy<ArchiveDataStream> _factory;
+        private ArchiveDataStream _instance => _factory.Value;
+
+        public ArchiveDataStreamLazy(Lazy<Stream> factory)
+        {
+            _factory = new Lazy<ArchiveDataStream>(() => new ArchiveDataStream(factory.Value));
+        }
+
+        public long Read(out nint pData)
+        {
+            return _instance.Read(out pData);
+        }
+
+        public long Seek(long offset, SeekOrigin whence)
+        {
+            return _instance.Seek(offset, whence);
+        }
+
+        public long Skip(long request)
+        {
+            return _instance.Skip(request);
+        }
+
+        public void Dispose()
+        {
+            if (_factory.IsValueCreated)
+            {
+                _instance.Dispose();
+            }
+        }
+
+        public ArchiveError Close()
+        {
+            if (_factory.IsValueCreated)
+            {
+                return _instance.Close();
+            }
+            return ArchiveError.OK;
+        }
+    }
+
     public class ArchiveDataStream : IArchiveStream, IDisposable
     {
         private readonly Stream _stream;

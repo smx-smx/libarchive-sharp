@@ -6,6 +6,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #endregion
+using Smx.SharpIO;
 using Smx.SharpIO.Memory;
 using System;
 using System.Collections.Generic;
@@ -14,11 +15,15 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using static libarchive.Methods;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace libarchive.Managed
 {
     public class ArchiveOperationFailedException : Exception
     {
+        public ArchiveOperationFailedException(TypedPointer<archive> handle, string func, ArchiveError err)
+            : base($"{func} failed: {Enum.GetName(err)} ({archive_error_string(handle)})")
+        { }
         public ArchiveOperationFailedException(string func, ArchiveError err)
             : base($"{func} failed: {Enum.GetName(err)}")
         { }
@@ -47,40 +52,126 @@ namespace libarchive.Managed
         private readonly TypedPointer<archive> _handle;
         private readonly ArchiveInputStream _inputStream;
 
-        private ArchiveDataStream _stream;
+        private IDictionary<int, IArchiveStream> _streams;
         private readonly Delegates.archive_read_callback _read_callback;
         private readonly Delegates.archive_close_callback _close_callback;
         private readonly Delegates.archive_seek_callback _seek_callback;
         private readonly Delegates.archive_skip_callback _skip_callback;
+        private readonly Delegates.archive_switch_callback _switch_callback;
+
+        public delegate void SwitchRequestedDelegate();
+        public event SwitchRequestedDelegate? OnSwitchRequested;
 
         public ArchiveInputStream InputStream => _inputStream;
 
         public ArchiveReader(Stream stream, ArchiveReaderOptions? opts = null)
-            : this(NewHandle(opts), new ArchiveDataStream(stream), true)
+            : this(NewHandle(opts), [new ArchiveDataStream(stream)], true)
         {
         }
 
-        public ArchiveReader(TypedPointer<archive> handle, ArchiveDataStream stream, bool owned)
+        public ArchiveReader(ICollection<Stream> streams, ArchiveReaderOptions? opts = null)
+            : this(NewHandle(opts), streams.Select(s => new ArchiveDataStream(s) as IArchiveStream).ToList(), true)
+        {
+        }
+
+        public ArchiveReader(ICollection<Lazy<Stream>> streams, ArchiveReaderOptions? opts = null)
+            : this(NewHandle(opts), streams.Select(s => new ArchiveDataStreamLazy(s) as IArchiveStream).ToList(), true)
+        { }
+
+        public ArchiveReader(ICollection<ArchiveDataStream> streams, ArchiveReaderOptions? opts = null)
+            : this(NewHandle(opts), streams.Cast<IArchiveStream>().ToList(), true)
+        { }
+
+        public void ReadToFd(int fd_dest)
+        {
+            var err = archive_read_data_into_fd(_handle, fd_dest);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_data_into_fd), err);
+            }
+        }
+
+        public ArchiveReader(TypedPointer<archive> handle, IList<IArchiveStream> streams, bool owned)
             : base(handle, owned)
         {
             _handle = handle;
-            _stream = stream;
+            _streams = streams.Select((s, i) => (i + 1, s))
+                .ToDictionary(
+                    // 1-based index identity
+                    itm => itm.Item1,
+                    itm => itm.s
+                );
+
             _inputStream = new ArchiveInputStream(handle);
 
-            // required to allocated client datasets, or we will crash
-            archive_read_set_callback_data(handle, 0);
+            // register stream identifiers
+            foreach (var key in _streams.Keys)
+            {
+                archive_read_append_callback_data(handle, key);
+            }
 
-            _read_callback = (arch, data, outData) => stream.Read(out outData.Value);
-            _seek_callback = (arch, data, offset, whence) => stream.Seek(offset, whence);
-            _skip_callback = (arch, data, request) => stream.Skip(request);
-            _close_callback = (arch, data) => stream.Close();
+            _read_callback = (arch, data, outData) =>
+            {
+                if (data == 0) throw new ArgumentNullException(nameof(data));
+                var stream = _streams[(int)data];
+                return stream.Read(out outData.Value);
+            };
+            _seek_callback = (arch, data, offset, whence) =>
+            {
+                if (data == 0) throw new ArgumentNullException(nameof(data));
+                var stream = _streams[(int)data];
+                return stream.Seek(offset, whence);
+            };
+            _skip_callback = (arch, data, request) =>
+            {
+                if (data == 0) throw new ArgumentNullException(nameof(data));
+                var stream = _streams[(int)data];
+                return stream.Skip(request);
+            };
+            _close_callback = (arch, data) =>
+            {
+                if (data == 0) throw new ArgumentNullException(nameof(data));
+                var stream = _streams[(int)data];
+                return stream.Close();
+            };
+            _switch_callback = (arch, data1, data2) =>
+            {
+                if (data1 != 0)
+                {
+                    var stream1 = _streams[(int)data1];
+                    stream1.Dispose();
+                    _streams.Remove((int)data1);
+                }
+                if (data2 != 0)
+                {
+                    var stream2 = _streams[(int)data2];
+                }
+                return ArchiveError.OK;
+            };
 
             //archive_read_set_open_callback(handle, (arch, data) => ArchiveError.OK);
             archive_read_set_read_callback(handle, _read_callback);
             archive_read_set_seek_callback(handle, _seek_callback);
             archive_read_set_skip_callback(handle, _skip_callback);
             archive_read_set_close_callback(handle, _close_callback);
+            archive_read_set_switch_callback(handle, _switch_callback);
             archive_read_open1(handle);
+        }
+
+        public long HeaderPosition => archive_read_header_position(_handle);
+        public int FormatCapabilities => archive_read_format_capabilities(_handle);
+
+        public bool HasEncryptedEntries
+        {
+            get
+            {
+                var res = archive_read_has_encrypted_entries(_handle);
+                if ((int)res < 0)
+                {
+                    throw new ArchiveOperationFailedException(nameof(archive_read_has_encrypted_entries), Enum.GetName(res) ?? "unknown failure");
+                }
+                return (int)res > 0 ? true : false;
+            }
         }
 
         public void SetFormat(ArchiveFormat format)
@@ -88,7 +179,16 @@ namespace libarchive.Managed
             var err = archive_read_set_format(_handle, format);
             if (err != ArchiveError.OK)
             {
-                throw new ArchiveOperationFailedException(nameof(archive_read_set_format), err);
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_set_format), err);
+            }
+        }
+
+        public void AddPassphrase(string passphrase)
+        {
+            var err = archive_read_add_passphrase(_handle, passphrase);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_add_passphrase), err);
             }
         }
 
@@ -97,7 +197,7 @@ namespace libarchive.Managed
             var err = archive_read_append_filter(_handle, filter);
             if (err != ArchiveError.OK)
             {
-                throw new ArchiveOperationFailedException(nameof(archive_read_append_filter), err);
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_append_filter), err);
             }
         }
 
@@ -195,7 +295,7 @@ namespace libarchive.Managed
             var err = archive_read_set_options(_handle, options);
             if (err != ArchiveError.OK)
             {
-                throw new ArchiveOperationFailedException(nameof(archive_read_set_options), err);
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_set_options), err);
             }
         }
     }
