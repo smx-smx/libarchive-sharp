@@ -19,8 +19,6 @@ namespace libarchive.Managed
 {
     public class ArchiveDiskWriter : ArchiveWriter
     {
-        private readonly TypedPointer<archive> _handle;
-        private readonly bool _owned;
         private readonly ArchiveOutputStream _outputStream;
 
         public ArchiveOutputStream OutputStream => _outputStream;
@@ -34,8 +32,6 @@ namespace libarchive.Managed
             bool owned
         ) : base(handle, owned)
         {
-            _handle = handle;
-            _owned = owned;
             _outputStream = new ArchiveOutputStream(_handle);
 
             if (archive_write_disk_set_options(handle, flags) != ArchiveError.OK)
@@ -43,6 +39,26 @@ namespace libarchive.Managed
                 throw new ArchiveOperationFailedException(handle, nameof(archive_write_disk_set_options), "failed to set write disk flags");
             }
             archive_write_disk_set_standard_lookup(handle);
+        }
+
+        public long GetRealGid(string name, long id)
+        {
+            var res = archive_write_disk_gid(_handle, name, id);
+            if (res < 0)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_disk_gid), (ArchiveError)res);
+            }
+            return res;
+        }
+
+        public long GetRealUid(string name, long id)
+        {
+            var res = archive_write_disk_uid(_handle, name, id);
+            if (res < 0)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_disk_uid), (ArchiveError)res);
+            }
+            return res;
         }
 
         private static TypedPointer<archive> NewHandle()

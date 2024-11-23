@@ -15,6 +15,7 @@ using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Markup;
 using static libarchive.Methods;
 
 namespace libarchive.Managed
@@ -28,8 +29,6 @@ namespace libarchive.Managed
 
     public class ArchiveWriter : Archive, IDisposable
     {
-        private readonly TypedPointer<archive> _handle;
-
         private Delegates.archive_open_callback? _open_callback;
         private Delegates.archive_write_callback? _write_callback;
         private Delegates.archive_close_callback? _close_callback;
@@ -83,11 +82,116 @@ namespace libarchive.Managed
             )
         { }
 
+        private Func<TypedPointer<archive>, ArchiveError>? GetFilterSetter(string filterName)
+        {
+            switch (filterName)
+            {
+                case ArchiveFilterNames.base64:
+                    return archive_write_add_filter_b64encode;
+                case ArchiveFilterNames.bzip2:
+                    return archive_write_add_filter_bzip2;
+                case ArchiveFilterNames.compress:
+                    return archive_write_add_filter_compress;
+                case ArchiveFilterNames.grzip:
+                    return archive_write_add_filter_grzip;
+                case ArchiveFilterNames.gzip:
+                    return archive_write_add_filter_gzip;
+                case ArchiveFilterNames.lrzip:
+                    return archive_write_add_filter_lrzip;
+                case ArchiveFilterNames.lz4:
+                    return archive_write_add_filter_lz4;
+                case ArchiveFilterNames.lzip:
+                    return archive_write_add_filter_lzip;
+                case ArchiveFilterNames.lzma:
+                    return archive_write_add_filter_lzma;
+                case ArchiveFilterNames.lzop:
+                    return archive_write_add_filter_lzop;
+                case ArchiveFilterNames.uuencode:
+                    return archive_write_add_filter_uuencode;
+                case ArchiveFilterNames.xz:
+                    return archive_write_add_filter_xz;
+                case ArchiveFilterNames.zstd:
+                    return archive_write_add_filter_zstd;
+                default:
+                    return null;
+            }
+        }
+
+        private Func<TypedPointer<archive>, ArchiveError>? GetFormatSetter(string formatName)
+        {
+            switch (formatName)
+            {
+                case ArchiveFormatNames.ArBsd:
+                    return archive_write_set_format_ar_bsd;
+                case ArchiveFormatNames.ArGnu:
+                case ArchiveFormatNames.ArSvr4:
+                    return archive_write_set_format_ar_svr4;
+                case ArchiveFormatNames.Bin:
+                    return archive_write_set_format_cpio_bin;
+                case ArchiveFormatNames.BsdTar:
+                case ArchiveFormatNames.Rpax:
+                case ArchiveFormatNames.Paxr:
+                    return archive_write_set_format_pax_restricted;
+                case ArchiveFormatNames.Cd9660:
+                case ArchiveFormatNames.Iso:
+                case ArchiveFormatNames.Iso9660:
+                    return archive_write_set_format_iso9660;
+                case ArchiveFormatNames.Cpio:
+                    return archive_write_set_format_cpio;
+                case ArchiveFormatNames.GnuTar:
+                    return archive_write_set_format_gnutar;
+                case ArchiveFormatNames.Mtree:
+                    return archive_write_set_format_mtree;
+                case ArchiveFormatNames.MtreeClassic:
+                    return archive_write_set_format_mtree_classic;
+                case ArchiveFormatNames.NewC:
+                    return archive_write_set_format_cpio_newc;
+                case ArchiveFormatNames.Odc:
+                    return archive_write_set_format_cpio_odc;
+                case ArchiveFormatNames.OldTar:
+                case ArchiveFormatNames.V7Tar:
+                case ArchiveFormatNames.V7:
+                    return archive_write_set_format_v7tar;
+                case ArchiveFormatNames.Pax:
+                case ArchiveFormatNames.Posix:
+                    return archive_write_set_format_pax;
+                case ArchiveFormatNames.Pwb:
+                    return archive_write_set_format_cpio_pwb;
+                case ArchiveFormatNames.Raw:
+                    return archive_write_set_format_raw;
+                case ArchiveFormatNames.SevenZip:
+                    return archive_write_set_format_7zip;
+                case ArchiveFormatNames.Shar:
+                    return archive_write_set_format_shar;
+                case ArchiveFormatNames.SharDump:
+                    return archive_write_set_format_shar_dump;
+                case ArchiveFormatNames.UsTar:
+                    return archive_write_set_format_ustar;
+                case ArchiveFormatNames.Warc:
+                    return archive_write_set_format_warc;
+                case ArchiveFormatNames.Xar:
+                    return archive_write_set_format_xar;
+                case ArchiveFormatNames.Zip:
+                    return archive_write_set_format_zip;
+                default:
+                    return null;
+            }
+        }
+
         private void SetFormat(string format)
         {
-            if (archive_write_set_format_by_name(_handle, format) != ArchiveError.OK)
+            var setter = GetFormatSetter(format);
+
+            var res = (setter == null)
+                    ? archive_write_set_format_by_name(_handle, format)
+                    : setter(_handle);
+
+            if (res != ArchiveError.OK)
             {
-                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_set_format_by_name), "failed to set archive format");
+                var methodName = (setter == null)
+                    ? nameof(archive_write_set_format_by_name)
+                    : setter.Method.Name;
+                throw new ArchiveOperationFailedException(_handle, methodName, "failed to set archive format");
             }
         }
 
@@ -101,9 +205,18 @@ namespace libarchive.Managed
 
         private void AddFilter(string filter)
         {
-            if (archive_write_add_filter_by_name(_handle, filter) != ArchiveError.OK)
+            var setter = GetFilterSetter(filter);
+
+            var res = (setter == null)
+                ? archive_write_add_filter_by_name(_handle, filter)
+                : setter(_handle);
+
+            if (res != ArchiveError.OK)
             {
-                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_add_filter_by_name), "failed to add archive filter");
+                var metodName = (setter == null)
+                    ? nameof(archive_write_add_filter_by_name)
+                    : setter.Method.Name;
+                throw new ArchiveOperationFailedException(_handle, metodName, "failed to add archive filter");
             }
         }
 
@@ -149,8 +262,16 @@ namespace libarchive.Managed
             bool owned
         ) : base(handle, owned)
         {
-            _handle = handle;
             _disposed = false;
+        }
+
+        public void AddFilterProgram(string cmd)
+        {
+            var res = archive_write_add_filter_program(_handle, cmd);
+            if (res != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_add_filter_program), res);
+            }
         }
 
         public ArchiveWriter(
@@ -197,6 +318,11 @@ namespace libarchive.Managed
             Setup(stream);
         }
 
+        public void AddEntry(ArchiveEntryItem entryRef, Stream? stream = null)
+        {
+            AddEntry(entryRef.Header, stream);
+        }
+
         public void AddEntry(SharedPtr<ArchiveEntry> entryRef, Stream? stream = null)
         {
             var entry = entryRef.AddRef();
@@ -207,7 +333,7 @@ namespace libarchive.Managed
                     entry.Size = stream.Length;
                 }
 
-                if (archive_write_header(_handle, entry.Handle) != ArchiveError.OK)
+                if (archive_write_header(_handle, entry) != ArchiveError.OK)
                 {
                     throw new ArchiveOperationFailedException(_handle, nameof(archive_write_header), "failed to write archive entry");
                 }

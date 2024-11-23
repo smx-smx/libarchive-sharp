@@ -28,6 +28,8 @@ namespace libarchive.Managed
         private readonly bool _owned;
         private bool _disposed;
 
+        public static implicit operator TypedPointer<archive_entry>(ArchiveEntry entry) => entry.Handle;
+
         public TypedPointer<archive> Archive => _archive;
         public TypedPointer<archive_entry> Handle => _handle;
 

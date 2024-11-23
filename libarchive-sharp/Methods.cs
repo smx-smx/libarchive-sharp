@@ -250,7 +250,7 @@ public static unsafe partial class Methods
         [MarshalAs(UnmanagedType.LPStr)] string cmd);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_read_append_filter_program_signature(
+    public static extern ArchiveError archive_read_append_filter_program_signature(
         TypedPointer<archive> archive,
         [MarshalAs(UnmanagedType.LPStr)] string cmd,
         [NativeTypeName("const void *")] nint signature,
@@ -405,7 +405,7 @@ public static unsafe partial class Methods
         out long offset);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_read_data_skip(TypedPointer<archive> archive);
+    public static extern ArchiveError archive_read_data_skip(TypedPointer<archive> archive);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern ArchiveError archive_read_data_into_fd(TypedPointer<archive> archive, int fd);
@@ -446,10 +446,16 @@ public static unsafe partial class Methods
         archive_passphrase_callback archive_passphrase_callback);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_read_extract(TypedPointer<archive> archive, TypedPointer<archive_entry> entry, int flags);
+    public static extern ArchiveError archive_read_extract(
+        TypedPointer<archive> archive,
+        TypedPointer<archive_entry> entry,
+        ArchiveExtractFlags flags);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern int archive_read_extract2(TypedPointer<archive> archive, TypedPointer<archive_entry> entry, TypedPointer<archive> param2);
+    public static extern ArchiveError archive_read_extract2(
+        TypedPointer<archive> archive,
+        TypedPointer<archive_entry> entry,
+        TypedPointer<archive> diskWriter);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern void archive_read_extract_set_progress_callback(
@@ -847,15 +853,15 @@ public static unsafe partial class Methods
     public static extern int archive_read_disk_set_gname_lookup(
         TypedPointer<archive> archive,
         nint private_data,
-        [NativeTypeName("const char *(*)(void *, la_int64_t)")] delegate* unmanaged[Cdecl]<void*, long, sbyte*> param2,
-        archive_lookup_cleanup_callback param3);
+        [NativeTypeName("const char *(*)(void *, la_int64_t)")] archive_group_name_lookup_callback lookup,
+        archive_lookup_cleanup_callback cleanup);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern int archive_read_disk_set_uname_lookup(
         TypedPointer<archive> archive,
         nint private_data,
-        [NativeTypeName("const char *(*)(void *, la_int64_t)")] delegate* unmanaged[Cdecl]<void*, long, sbyte*> param2,
-        archive_lookup_cleanup_callback param3);
+        [NativeTypeName("const char *(*)(void *, la_int64_t)")] Delegates.archive_user_name_lookup_callback lookup,
+        archive_lookup_cleanup_callback cleanup);
 
     [DllImport("archive", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern int archive_read_disk_open(TypedPointer<archive> archive, [MarshalAs(UnmanagedType.LPStr)] string param1);

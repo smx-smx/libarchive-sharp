@@ -23,9 +23,9 @@ namespace libarchive.Managed
         private readonly Lazy<ArchiveDataStream> _factory;
         private ArchiveDataStream _instance => _factory.Value;
 
-        public ArchiveDataStreamLazy(Lazy<Stream> factory)
+        public ArchiveDataStreamLazy(Lazy<Stream> factory, int bufferSize = -1)
         {
-            _factory = new Lazy<ArchiveDataStream>(() => new ArchiveDataStream(factory.Value));
+            _factory = new Lazy<ArchiveDataStream>(() => new ArchiveDataStream(factory.Value, bufferSize: bufferSize));
         }
 
         public long Read(out nint pData)

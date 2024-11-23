@@ -9,47 +9,78 @@
 using Smx.SharpIO;
 using Smx.SharpIO.Memory;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
+using System.Net.WebSockets;
+using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using static libarchive.Methods;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace libarchive.Managed
 {
-    public class ArchiveOperationFailedException : Exception
+    public record ArchiveDataBlock(Memory<byte> Data, long Offset);
+
+    public class ArchiveEntryItem
     {
-        public ArchiveOperationFailedException(TypedPointer<archive> handle, string func, ArchiveError err)
-            : base($"{func} failed: {Enum.GetName(err)} ({archive_error_string(handle)})")
-        { }
-        public ArchiveOperationFailedException(string func, ArchiveError err)
-            : base($"{func} failed: {Enum.GetName(err)}")
-        { }
+        private readonly int _index;
+        private readonly ArchiveEntry _entry;
+        public ArchiveEntry Header => _entry;
+        public int Index => _index;
 
-        public ArchiveOperationFailedException(string func, string err)
-            : base($"{func} failed: {err}")
-        { }
+        private bool _consumed;
+        private MemoryStream _data;
 
-        public ArchiveOperationFailedException(TypedPointer<archive> handle, string func)
-            : base($"{func} failed: {archive_errno(handle):X}: {archive_error_string(handle)}")
-        { }
+        private readonly IEnumerable<ArchiveDataBlock> _producer;
+        private readonly ArchiveDataStreamer _streamer;
 
-        public ArchiveOperationFailedException(TypedPointer<archive> handle, string func, string err)
-            : base($"{func} failed: {err}. ({archive_errno(handle):X}: {archive_error_string(handle)})")
-        { }
-    }
+        public IEnumerable<byte> Bytes
+        {
+            get
+            {
+                if (!_consumed)
+                {
+                    foreach (var b in _streamer.GetBytes())
+                    {
+                        _data.WriteByte(b);
+                        yield return b;
+                    }
+                    _consumed = true;
+                } else
+                {
+                    if (!_data.TryGetBuffer(out var buf))
+                    {
+                        throw new InvalidOperationException();
+                    }
+                    foreach (var b in buf)
+                    {
+                        yield return b;
+                    }
+                }
+            }
+        }
 
-    public class ArchiveReaderOptions
-    {
-        public ICollection<ArchiveFormat> EnableFormats { get; set; } = Array.Empty<ArchiveFormat>();
-        public ICollection<ArchiveFilter> EnableFilters { get; set; } = Array.Empty<ArchiveFilter>();
+        public ArchiveEntryItem(
+            int index,
+            ArchiveEntry entry,
+            IEnumerable<ArchiveDataBlock> producer)
+        {
+            _index = index;
+            _entry = entry;
+            _consumed = false;
+            _producer = producer;
+            _streamer = new ArchiveDataStreamer(_producer);
+            _data = new MemoryStream();
+        }
     }
 
     public class ArchiveReader : Archive, IDisposable
     {
-        private readonly TypedPointer<archive> _handle;
         private readonly ArchiveInputStream _inputStream;
 
         private IDictionary<int, IArchiveStream> _streams;
@@ -62,24 +93,51 @@ namespace libarchive.Managed
         public delegate void SwitchRequestedDelegate();
         public event SwitchRequestedDelegate? OnSwitchRequested;
 
+        public ArchiveCallbackData CallbackData { get; private set; }
+        public IEnumerable<ArchiveEntryItem> Entries { get; private set; }
+
         public ArchiveInputStream InputStream => _inputStream;
 
+        private ArchiveReaderOptions? _opts;
+
+        public int BufferSize => _opts?.BufferSize ?? ArchiveConstants.BUFFER_SIZE;
+
         public ArchiveReader(Stream stream, ArchiveReaderOptions? opts = null)
-            : this(NewHandle(opts), [new ArchiveDataStream(stream)], true)
+            : this(NewHandle(opts), [new ArchiveDataStream(stream)], true, opts)
         {
         }
 
+        private static IList<IArchiveStream> CreateArchiveStreams(ICollection<Stream> streams, ArchiveReaderOptions? opts = null)
+        {
+            var bufferSize = opts?.BufferSize ?? ArchiveConstants.BUFFER_SIZE;
+            return streams.Select(s =>
+            {
+                var ds = new ArchiveDataStream(s, bufferSize: bufferSize);
+                return ds as IArchiveStream;
+            }).ToList();
+        }
+
+        private static IList<IArchiveStream> CreateArchiveStreams(ICollection<Lazy<Stream>> streams, ArchiveReaderOptions? opts = null)
+        {
+            var bufferSize = opts?.BufferSize ?? ArchiveConstants.BUFFER_SIZE;
+            return streams.Select(s =>
+            {
+                var ds = new ArchiveDataStreamLazy(s, bufferSize: bufferSize);
+                return ds as IArchiveStream;
+            }).ToList();
+        }
+
         public ArchiveReader(ICollection<Stream> streams, ArchiveReaderOptions? opts = null)
-            : this(NewHandle(opts), streams.Select(s => new ArchiveDataStream(s) as IArchiveStream).ToList(), true)
+            : this(NewHandle(opts), CreateArchiveStreams(streams, opts), true, opts)
         {
         }
 
         public ArchiveReader(ICollection<Lazy<Stream>> streams, ArchiveReaderOptions? opts = null)
-            : this(NewHandle(opts), streams.Select(s => new ArchiveDataStreamLazy(s) as IArchiveStream).ToList(), true)
+            : this(NewHandle(opts), CreateArchiveStreams(streams, opts), true, opts)
         { }
 
         public ArchiveReader(ICollection<ArchiveDataStream> streams, ArchiveReaderOptions? opts = null)
-            : this(NewHandle(opts), streams.Cast<IArchiveStream>().ToList(), true)
+            : this(NewHandle(opts), streams.Cast<IArchiveStream>().ToList(), true, opts)
         { }
 
         public void ReadToFd(int fd_dest)
@@ -91,10 +149,15 @@ namespace libarchive.Managed
             }
         }
 
-        public ArchiveReader(TypedPointer<archive> handle, IList<IArchiveStream> streams, bool owned)
+        public ArchiveReader(
+            TypedPointer<archive> handle,
+            IList<IArchiveStream> streams,
+            bool owned,
+            ArchiveReaderOptions? opts
+        )
             : base(handle, owned)
         {
-            _handle = handle;
+            _opts = opts;
             _streams = streams.Select((s, i) => (i + 1, s))
                 .ToDictionary(
                     // 1-based index identity
@@ -149,13 +212,16 @@ namespace libarchive.Managed
                 return ArchiveError.OK;
             };
 
-            //archive_read_set_open_callback(handle, (arch, data) => ArchiveError.OK);
+            archive_read_set_open_callback(handle, (arch, data) => ArchiveError.OK);
             archive_read_set_read_callback(handle, _read_callback);
             archive_read_set_seek_callback(handle, _seek_callback);
             archive_read_set_skip_callback(handle, _skip_callback);
             archive_read_set_close_callback(handle, _close_callback);
             archive_read_set_switch_callback(handle, _switch_callback);
             archive_read_open1(handle);
+
+            CallbackData = new ArchiveCallbackData(_handle);
+            Entries = new ArchiveEntryStream(this);
         }
 
         public long HeaderPosition => archive_read_header_position(_handle);
@@ -201,14 +267,216 @@ namespace libarchive.Managed
             }
         }
 
-        public IEnumerable<ArchiveEntry> Entries
+        public void AppendFilterProgram(string cmd)
         {
-            get
+            var err = archive_read_append_filter_program(_handle, cmd);
+            if (err != ArchiveError.OK)
             {
-                while (archive_read_next_header(_handle, out var entry) == ArchiveError.OK)
-                {
-                    yield return new ArchiveEntry(_handle, entry, false);
-                }
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_append_filter_program), err);
+            }
+        }
+
+        public void AppendFilterProgramBySignature(string cmd, Memory<byte> signature)
+        {
+            using var bufRef = signature.Pin();
+            nint dptr;
+            unsafe
+            {
+                dptr = new nint(bufRef.Pointer);
+            }
+            var err = archive_read_append_filter_program_signature(_handle, cmd, dptr, (nuint)signature.Length);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_append_filter_program_signature), err);
+            }
+        }
+
+
+        public void Extract(TypedPointer<archive_entry> entry, ArchiveExtractFlags flags)
+        {
+            var err = archive_read_extract(_handle, entry, flags);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_extract), err);
+            }
+        }
+
+        public void Extract(TypedPointer<archive_entry> entry, ArchiveDiskWriter writer)
+        {
+            var err = archive_read_extract2(_handle, entry, writer);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_extract2), err);
+            }
+        }
+
+        public void RequestFormatByProgram(string program)
+        {
+            var err = archive_read_support_filter_program(_handle, program);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_support_filter_program), err);
+            }
+        }
+
+        private static Func<TypedPointer<archive>, ArchiveError>? GetRequestFormatFunc(ArchiveFormat format)
+        {
+            switch ((ArchiveFormat)((uint)format & 0xff0000))
+            {
+                case ArchiveFormat.AR:
+                    return archive_read_support_format_ar;
+                case ArchiveFormat.SEVENZIP:
+                    return archive_read_support_format_7zip;
+                case ArchiveFormat.CAB:
+                    return archive_read_support_format_cab;
+                case ArchiveFormat.CPIO:
+                    return archive_read_support_format_cpio;
+                case ArchiveFormat.EMPTY:
+                    return archive_read_support_format_empty;
+                case ArchiveFormat.ISO9660:
+                    return archive_read_support_format_iso9660;
+                case ArchiveFormat.LHA:
+                    return archive_read_support_format_lha;
+                case ArchiveFormat.MTREE:
+                    return archive_read_support_format_mtree;
+                case ArchiveFormat.RAR:
+                    return archive_read_support_format_rar;
+                case ArchiveFormat.RAR_V5:
+                    return archive_read_support_format_rar5;
+                case ArchiveFormat.RAW:
+                    return archive_read_support_format_raw;
+                case ArchiveFormat.TAR:
+                    return archive_read_support_format_tar;
+                case ArchiveFormat.WARC:
+                    return archive_read_support_format_warc;
+                case ArchiveFormat.XAR:
+                    return archive_read_support_format_xar;
+                case ArchiveFormat.ZIP:
+                    return archive_read_support_format_zip;
+                default:
+                    return null;
+            }
+        }
+
+        private static Func<TypedPointer<archive>, ArchiveError>? GetFilterSetter(ArchiveFilter filter)
+        {
+
+            switch (filter)
+            {
+                case ArchiveFilter.NONE:
+                    return archive_read_support_filter_none;
+                case ArchiveFilter.GZIP:
+                    return archive_read_support_filter_gzip;
+                case ArchiveFilter.BZIP2:
+                    return archive_read_support_filter_bzip2;
+                case ArchiveFilter.COMPRESS:
+                    return archive_read_support_filter_compress;
+                case ArchiveFilter.LZMA:
+                    return archive_read_support_filter_lzma;
+                case ArchiveFilter.XZ:
+                    return archive_read_support_filter_xz;
+                case ArchiveFilter.UU:
+                    return archive_read_support_filter_uu;
+                case ArchiveFilter.RPM:
+                    return archive_read_support_filter_rpm;
+                case ArchiveFilter.LZIP:
+                    return archive_read_support_filter_lzip;
+                case ArchiveFilter.LRZIP:
+                    return archive_read_support_filter_lrzip;
+                case ArchiveFilter.LZOP:
+                    return archive_read_support_filter_lzop;
+                case ArchiveFilter.GRZIP:
+                    return archive_read_support_filter_grzip;
+                case ArchiveFilter.LZ4:
+                    return archive_read_support_filter_lz4;
+                case ArchiveFilter.ZSTD:
+                    return archive_read_support_filter_zstd;
+                default:
+                    return null;
+            }
+        }
+
+        private static void RequestFilter(TypedPointer<archive> handle, ArchiveFilter filter)
+        {
+            var func = GetFilterSetter(filter);
+            var err = (func == null)
+                ? archive_read_support_filter_by_code(handle, filter)
+                : func(handle);
+
+            if (err != ArchiveError.OK)
+            {
+                var methodName = (func == null)
+                    ? nameof(archive_read_support_filter_by_code)
+                    : func.Method.Name;
+                throw new ArchiveOperationFailedException(handle, methodName, err);
+            }
+        }
+
+        private static void RequestFormat(TypedPointer<archive> handle, ArchiveFormat format)
+        {
+            var func = GetRequestFormatFunc(format);
+            var err = (func == null)
+                ? archive_read_support_format_by_code(handle, format)
+                : func(handle);
+
+            if (err != ArchiveError.OK)
+            {
+                var methodName = (func == null)
+                    ? nameof(archive_read_support_format_by_code)
+                    : func.Method.Name;
+                throw new ArchiveOperationFailedException(handle, methodName, err);
+            }
+        }
+
+        public void RequestFilter(ArchiveFilter filter)
+        {
+            RequestFilter(filter);
+        }
+
+        public void RequestFormat(ArchiveFormat format)
+        {
+            RequestFormat(_handle, format);
+        }
+
+        public void RequestFormatGnuTar()
+        {
+            var err = archive_read_support_format_gnutar(_handle);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_support_format_gnutar), err);
+            }
+        }
+
+        public void RequestFormatZipStreamable()
+        {
+            var err = archive_read_support_format_zip_streamable(_handle);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_support_format_zip_streamable), err);
+            }
+        }
+
+        public void RequestFormatZipSeekable()
+        {
+            var err = archive_read_support_format_zip_seekable(_handle);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_support_format_zip_seekable), err);
+            }
+        }
+
+        public void RequestFormatByProgramSignature(string program, Memory<byte> signature)
+        {
+            using var bufRef = signature.Pin();
+            nint dptr;
+            unsafe
+            {
+                dptr = new nint(bufRef.Pointer);
+            }
+            var err = archive_read_support_filter_program_signature(_handle, program, dptr, (nuint)signature.Length);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_support_filter_program_signature), err);
             }
         }
 
@@ -221,17 +489,25 @@ namespace libarchive.Managed
             }
             if (opts == null)
             {
-                archive_read_support_format_all(handle);
-                archive_read_support_filter_all(handle);
+                var err = archive_read_support_format_all(handle);
+                if (err != ArchiveError.OK)
+                {
+                    throw new ArchiveOperationFailedException(handle, nameof(archive_read_support_format_all), err);
+                }
+                err = archive_read_support_filter_all(handle);
+                if (err != ArchiveError.OK)
+                {
+                    throw new ArchiveOperationFailedException(handle, nameof(archive_read_support_filter_all), err);
+                }
             } else
             {
                 foreach (var format in opts.EnableFormats)
                 {
-                    archive_read_support_format_by_code(handle, format);
+                    RequestFormat(handle, format);
                 }
                 foreach (var filter in opts.EnableFilters)
                 {
-                    archive_read_support_filter_by_code(handle, filter);
+                    RequestFilter(handle, filter);
                 }
             }
             return handle;

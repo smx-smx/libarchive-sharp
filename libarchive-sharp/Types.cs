@@ -59,6 +59,23 @@ namespace libarchive
         NamedPipe = Constants.AE_IFIFO,
     }
 
+    public class ArchiveFilterNames
+    {
+        public const string base64 = "b64encode";
+        public const string bzip2 = "bzip2";
+        public const string compress = "compress";
+        public const string grzip = "grzip";
+        public const string gzip = "gzip";
+        public const string lrzip = "lrzip";
+        public const string lz4 = "lz4";
+        public const string lzip = "lzip";
+        public const string lzma = "lzma";
+        public const string lzop = "lzop";
+        public const string uuencode = "uuencode";
+        public const string xz = "xz";
+        public const string zstd = "zstd";
+    }
+
     public class ArchiveFormatNames
     {
         public const string SevenZip = "7zip";

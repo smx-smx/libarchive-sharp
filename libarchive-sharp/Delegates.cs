@@ -6,7 +6,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #endregion
-﻿using Smx.SharpIO.Memory;
+using Smx.SharpIO.Memory;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -56,6 +56,14 @@ namespace libarchive
             long gid);
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        public delegate long archive_lookup_cleanup_callback(nint private_data);
+        public delegate void archive_lookup_cleanup_callback(nint private_data);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.LPStr)]
+        public delegate string? archive_user_name_lookup_callback(nint private_data, long uid);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.LPStr)]
+        public delegate string? archive_group_name_lookup_callback(nint private_data, long gid);
     }
 }

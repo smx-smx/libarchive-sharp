@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Schema;
 using static libarchive.Methods;
 
 namespace libarchive.Managed
@@ -27,9 +28,27 @@ namespace libarchive.Managed
         public static string VersionLz4 => archive_liblz4_version();
         public static string VersionZstd => archive_libzstd_version();
 
-        private readonly TypedPointer<archive> _handle;
+        protected readonly TypedPointer<archive> _handle;
         protected bool _disposed;
         protected readonly bool _owned;
+
+        public TypedPointer<archive> Handle => _handle;
+
+        public static implicit operator TypedPointer<archive>(Archive self) => self.Handle;
+
+        public long FilterCount => archive_filter_count(_handle);
+        public string GetFilterName(int idx)
+        {
+            return archive_filter_name(_handle, idx);
+        }
+        public long GetFilterBytes(int idx)
+        {
+            return archive_filter_bytes(_handle, idx);
+        }
+        public int GetFilterCode(int idx)
+        {
+            return archive_filter_code(_handle, idx);
+        }
 
         protected Archive(TypedPointer<archive> handle, bool owned)
         {
