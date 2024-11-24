@@ -55,6 +55,12 @@ namespace libarchive.Managed
             _owned = owned;
         }
 
+        public ArchiveEntry Clone()
+        {
+            var newHandle = archive_entry_clone(_handle);
+            return new ArchiveEntry(_archive, newHandle, true);
+        }
+
         private static TypedPointer<archive_entry> NewHandle(TypedPointer<archive> archive)
         {
             // NOTE: archive pointer can be NULL, it's used for charset info
@@ -433,6 +439,16 @@ namespace libarchive.Managed
                 var mem = new byte[size];
                 Marshal.Copy(dptr, mem, 0, mem.Length);
                 return mem;
+            }
+            set
+            {
+                using var bufRef = value.Pin();
+                nint bufAddr;
+                unsafe
+                {
+                    bufAddr = new nint(bufRef.Pointer);
+                }
+                archive_entry_copy_mac_metadata(_handle, bufAddr, (nuint)value.Length);
             }
         }
 

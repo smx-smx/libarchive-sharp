@@ -10,6 +10,7 @@ using Smx.SharpIO.Memory;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 using Windows.Win32.Storage.FileSystem;
@@ -26,6 +27,37 @@ namespace libarchive.Managed
         public ArchiveDiskWriter() : this(NewHandle(), 0, true)
         { }
 
+        private Delegates.archive_group_lookup_callback? _group_lookup;
+        private Delegates.archive_user_lookup_callback? _user_lookup;
+
+        public Delegates.archive_user_lookup_callback? UserLookup
+        {
+            get => _user_lookup;
+            set
+            {
+                _user_lookup = value;
+                var err = archive_write_disk_set_user_lookup(_handle, 0, _user_lookup, null);
+                if (err != ArchiveError.OK)
+                {
+                    throw new ArchiveOperationFailedException(_handle, nameof(archive_write_disk_set_user_lookup), err);
+                }
+            }
+        }
+
+        public Delegates.archive_group_lookup_callback? GroupLookup
+        {
+            get => _group_lookup;
+            set
+            {
+                _group_lookup = value;
+                var err = archive_write_disk_set_group_lookup(_handle, 0, _group_lookup, null);
+                if (err != ArchiveError.OK)
+                {
+                    throw new ArchiveOperationFailedException(_handle, nameof(archive_write_disk_set_group_lookup), err);
+                }
+            }
+        }
+
         public ArchiveDiskWriter(
             TypedPointer<archive> handle,
             ArchiveExtractFlags flags,
@@ -34,11 +66,21 @@ namespace libarchive.Managed
         {
             _outputStream = new ArchiveOutputStream(_handle);
 
-            if (archive_write_disk_set_options(handle, flags) != ArchiveError.OK)
+            var err = archive_write_disk_set_options(handle, flags);
+            if (err != ArchiveError.OK)
             {
-                throw new ArchiveOperationFailedException(handle, nameof(archive_write_disk_set_options), "failed to set write disk flags");
+                throw new ArchiveOperationFailedException(handle, nameof(archive_write_disk_set_options), err);
             }
             archive_write_disk_set_standard_lookup(handle);
+        }
+
+        public void SetSkipFile(long device, long inode)
+        {
+            var err = archive_write_disk_set_skip_file(_handle, device, inode);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_disk_set_skip_file), err);
+            }
         }
 
         public long GetRealGid(string name, long id)

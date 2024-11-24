@@ -6,7 +6,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #endregion
-﻿using Smx.SharpIO.Memory;
+using Smx.SharpIO.Memory;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,6 +29,18 @@ namespace libarchive.Managed
         public ArchiveMatch()
             : this(NewHandle(), true)
         {
+        }
+
+        private Delegates.archive_match_excluded_callback? _match_excluded_callback;
+
+        public void SetMatchingCallback(TypedPointer<archive> archive, Delegates.archive_match_excluded_callback? callback)
+        {
+            _match_excluded_callback = callback;
+            var err = archive_read_disk_set_matching(_handle, archive, _match_excluded_callback, 0);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_disk_set_matching), err);
+            }
         }
 
         protected override void Dispose(bool disposing)
@@ -112,14 +124,34 @@ namespace libarchive.Managed
             return this;
         }
 
+        public bool IsExcluded(TypedPointer<archive_entry> entry)
+        {
+            var res = archive_match_excluded(_handle, entry);
+            if (res < 0)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_match_excluded), (ArchiveError)res);
+            }
+            return res == 0 ? false : true;
+        }
+
+        public bool IsOwnerExcluded(TypedPointer<archive_entry> entry)
+        {
+            var res = archive_match_owner_excluded(_handle, entry);
+            if (res < 0)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_match_owner_excluded), (ArchiveError)res);
+            }
+            return res == 0 ? false : true;
+        }
+
         public bool IsTimeExcluded(TypedPointer<archive_entry> entry)
         {
-            var err = archive_match_time_excluded(_handle, entry);
-            if (err < 0)
+            var res = archive_match_time_excluded(_handle, entry);
+            if (res < 0)
             {
-                throw new ArchiveOperationFailedException(_handle, nameof(archive_match_time_excluded), (ArchiveError)err);
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_match_time_excluded), (ArchiveError)res);
             }
-            return err == 0 ? false : true;
+            return res == 0 ? false : true;
         }
 
         public ArchiveMatch WithoutEntry(TypedPointer<archive_entry> entry, ArchiveMatchFlags flags = 0)

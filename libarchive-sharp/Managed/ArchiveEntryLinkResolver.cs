@@ -6,7 +6,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #endregion
-﻿using Smx.SharpIO.Memory;
+using Smx.SharpIO.Memory;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -59,6 +59,11 @@ namespace libarchive.Managed
                 throw new ArchiveOperationFailedException(nameof(archive_entry_linkresolver_new), "out of memory");
             }
             return handle;
+        }
+
+        public TypedPointer<archive_entry> PartialLinks(out uint links)
+        {
+            return archive_entry_partial_links(_handle, out links);
         }
 
         protected virtual void Dispose(bool disposing)

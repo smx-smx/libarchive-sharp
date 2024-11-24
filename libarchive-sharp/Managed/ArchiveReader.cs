@@ -89,9 +89,14 @@ namespace libarchive.Managed
         private readonly Delegates.archive_seek_callback _seek_callback;
         private readonly Delegates.archive_skip_callback _skip_callback;
         private readonly Delegates.archive_switch_callback _switch_callback;
+        private Delegates.archive_passphrase_callback? _passphrase_callback;
+        private Delegates.progress_callback? _progress_callback;
 
         public delegate void SwitchRequestedDelegate();
+        public delegate void ProgressDelegate();
+
         public event SwitchRequestedDelegate? OnSwitchRequested;
+        public event ProgressDelegate? OnProgress;
 
         public ArchiveCallbackData CallbackData { get; private set; }
         public IEnumerable<ArchiveEntryItem> Entries { get; private set; }
@@ -139,6 +144,30 @@ namespace libarchive.Managed
         public ArchiveReader(ICollection<ArchiveDataStream> streams, ArchiveReaderOptions? opts = null)
             : this(NewHandle(opts), streams.Cast<IArchiveStream>().ToList(), true, opts)
         { }
+
+        public Delegates.archive_passphrase_callback? PassphraseCallback
+        {
+            get => _passphrase_callback;
+            set
+            {
+                _passphrase_callback = value;
+                var err = archive_read_set_passphrase_callback(_handle, 0, _passphrase_callback);
+                if (err != ArchiveError.OK)
+                {
+                    throw new ArchiveOperationFailedException(_handle, nameof(archive_read_set_passphrase_callback), err);
+                }
+            }
+        }
+
+        private Delegates.progress_callback? ProgressCallback
+        {
+            get => _progress_callback;
+            set
+            {
+                _progress_callback = value;
+                archive_read_extract_set_progress_callback(_handle, _progress_callback, 0);
+            }
+        }
 
         public void ReadToFd(int fd_dest)
         {
@@ -222,6 +251,10 @@ namespace libarchive.Managed
 
             CallbackData = new ArchiveCallbackData(_handle);
             Entries = new ArchiveEntryStream(this);
+            ProgressCallback = (_) =>
+            {
+                OnProgress?.Invoke();
+            };
         }
 
         public long HeaderPosition => archive_read_header_position(_handle);
@@ -290,7 +323,6 @@ namespace libarchive.Managed
                 throw new ArchiveOperationFailedException(_handle, nameof(archive_read_append_filter_program_signature), err);
             }
         }
-
 
         public void Extract(TypedPointer<archive_entry> entry, ArchiveExtractFlags flags)
         {

@@ -213,6 +213,15 @@ namespace libarchive.Managed
             }
         }
 
+        public void SetSkipFile(long device, long inode)
+        {
+            var err = archive_write_set_skip_file(_handle, device, inode);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_set_skip_file), err);
+            }
+        }
+
         private void SetFormat(string formatSpec)
         {
             var parts = formatSpec.Split('+');

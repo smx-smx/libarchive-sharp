@@ -62,6 +62,11 @@ namespace libarchive.Managed
             }
         }
 
+        public int CurrentFilesystem
+        {
+            get => archive_read_disk_current_filesystem(_handle);
+        }
+
         public bool CurrentFilesystemIsRemote
         {
             get
@@ -114,6 +119,15 @@ namespace libarchive.Managed
         public ArchiveDiskReader() : this(NewHandle(), true)
         { }
 
+        public ArchiveDiskReader(string pathName) : this(NewHandle(), true)
+        {
+            var err = archive_read_disk_open_w(_handle, pathName);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_disk_open_w), err);
+            }
+        }
+
         public Delegates.archive_user_name_lookup_callback UserNameLookup
         {
             set
@@ -135,6 +149,15 @@ namespace libarchive.Managed
                     _handle, 0,
                     _gname_lookup,
                     _dummy_cleanup);
+            }
+        }
+
+        public void SetStandardLookup()
+        {
+            var err = archive_read_disk_set_standard_lookup(_handle);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_disk_set_standard_lookup), err);
             }
         }
 

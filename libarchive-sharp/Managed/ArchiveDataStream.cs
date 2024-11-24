@@ -8,6 +8,7 @@
 #endregion
 using Smx.SharpIO;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -67,7 +68,8 @@ namespace libarchive.Managed
         private readonly bool _leaveOpen;
         private bool _disposed;
         private Memory<byte> _buffer;
-        private nint _bufferHandle;
+        private nint _bufferAddr;
+        private MemoryHandle _bufferHandle;
 
         public ArchiveDataStream(Stream baseStream, bool leaveOpen = false, int bufferSize = -1)
         {
@@ -78,15 +80,19 @@ namespace libarchive.Managed
             if (bufferSize <= 0) bufferSize = ArchiveConstants.BUFFER_SIZE;
             _buffer = new byte[bufferSize];
 
+            _bufferHandle = _buffer.Pin();
             unsafe
             {
-                _bufferHandle = new nint(Unsafe.AsPointer(ref _buffer.Span.GetPinnableReference()));
+                _bufferAddr = new nint(_bufferHandle.Pointer);
             }
         }
 
         public ArchiveError Close()
         {
-            Dispose();
+            _bufferHandle.Dispose();
+            _stream.Close();
+            _stream.Dispose();
+            _disposed = true;
             return ArchiveError.OK;
         }
 
@@ -94,16 +100,14 @@ namespace libarchive.Managed
         {
             if (!_disposed && !_leaveOpen)
             {
-                _stream.Close();
-                _stream.Dispose();
-                _disposed = true;
+                Close();
             }
         }
 
         public long Read(out nint pData)
         {
             var nRead = _stream.Read(_buffer.Span);
-            pData = _bufferHandle;
+            pData = _bufferAddr;
             return nRead;
         }
 

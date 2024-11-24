@@ -41,7 +41,7 @@ namespace libarchive
         public delegate string archive_passphrase_callback(TypedPointer<archive> archive, nint client_data);
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        public delegate void progress_func(nint user_data);
+        public delegate void progress_callback(nint user_data);
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate long archive_write_callback(TypedPointer<archive> archive, nint client_data, nint buffer, nuint length);
@@ -56,6 +56,12 @@ namespace libarchive
             long gid);
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate long archive_user_lookup_callback(
+            nint private_data,
+            [MarshalAs(UnmanagedType.LPStr)] string uname,
+            long uid);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void archive_lookup_cleanup_callback(nint private_data);
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -65,5 +71,12 @@ namespace libarchive
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.LPStr)]
         public delegate string? archive_group_name_lookup_callback(nint private_data, long gid);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate void archive_match_excluded_callback(
+            TypedPointer<archive> archive,
+            nint private_data,
+            TypedPointer<archive_entry> entry
+        );
     }
 }

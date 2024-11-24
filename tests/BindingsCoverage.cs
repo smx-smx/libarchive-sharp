@@ -34,6 +34,15 @@ namespace tests
                 .Select(m => m.Name)
                 .ToHashSet();
 
+            // not portable due to the use of non-portable types (e.g. struct stat)
+            var notPortable = new HashSet<string>()
+            {
+                nameof(archive_entry_stat),
+                nameof(archive_entry_copy_stat),
+                nameof(archive_entry_copy_bhfi),
+                nameof(archive_read_disk_entry_from_file),
+            };
+
             var excluded = new HashSet<string>()
             {
                 /// covered by <see cref="archive_entry_hardlink_w" />
@@ -58,7 +67,7 @@ namespace tests
                 nameof(archive_entry_uname_utf8),
                 nameof(archive_entry_set_uname),
                 nameof(archive_entry_set_uname_utf8),
-                nameof(archive_entry_copy_uname_w),
+                nameof(archive_entry_copy_uname),
                 /// covered by <see cref="archive_entry_gname_w" />
                 nameof(archive_entry_gname),
                 nameof(archive_entry_gname_utf8),
@@ -128,8 +137,10 @@ namespace tests
                 /// covered by <see cref="archive_match_include_file_time_w" />
                 nameof(archive_match_include_file_time),
                 /// covered by <see cref="archive_match_path_unmatched_inclusions_next_w" />
-                nameof(archive_match_path_unmatched_inclusions_next)
-            }.Concat(deprecated);
+                nameof(archive_match_path_unmatched_inclusions_next),
+                /// covered by <see cref="archive_read_disk_open_w" />
+                nameof(archive_read_disk_open)
+            }.Concat(deprecated).Concat(notPortable);
 
             var asm = AssemblyDefinition.ReadAssembly("libarchive-sharp.dll");
 

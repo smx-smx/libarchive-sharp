@@ -6,7 +6,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #endregion
-﻿using Smx.SharpIO.Memory;
+using Smx.SharpIO.Memory;
 using System.Collections;
 using static libarchive.Methods;
 
@@ -19,6 +19,19 @@ namespace libarchive.Managed
         public ArchiveMatchUnmatchedInclusions(TypedPointer<archive> handle)
         {
             _handle = handle;
+        }
+
+        public int Count
+        {
+            get
+            {
+                var res = archive_match_path_unmatched_inclusions(_handle);
+                if (res < 0)
+                {
+                    throw new ArchiveOperationFailedException(_handle, nameof(archive_match_path_unmatched_inclusions), (ArchiveError)res);
+                }
+                return res;
+            }
         }
 
         private IEnumerable<string> ItemsEnumerable
