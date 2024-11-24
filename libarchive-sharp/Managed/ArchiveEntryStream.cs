@@ -120,7 +120,7 @@ namespace libarchive.Managed
         public void Reset()
         {
             throw new NotImplementedException();
-            _index = 0;
+            //_index = 0;
         }
 
         public IEnumerator<ArchiveEntryItem> GetEnumerator()

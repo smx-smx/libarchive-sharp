@@ -33,6 +33,9 @@ namespace libarchive.Managed
         private Delegates.archive_write_callback? _write_callback;
         private Delegates.archive_close_callback? _close_callback;
         private Delegates.archive_free_callback? _free_callback;
+        private Delegates.archive_passphrase_callback? _passphrase_callback;
+
+        private TypedPointer<archive> _handle => ArchiveHandle;
 
         public int BufferSize { get; private set; }
 
@@ -70,6 +73,20 @@ namespace libarchive.Managed
                 if (err != ArchiveError.OK)
                 {
                     throw new ArchiveOperationFailedException(_handle, nameof(archive_write_set_bytes_in_last_block), err);
+                }
+            }
+        }
+
+        public Delegates.archive_passphrase_callback? PassphraseCallback
+        {
+            get => _passphrase_callback;
+            set
+            {
+                _passphrase_callback = value;
+                var err = archive_write_set_passphrase_callback(_handle, 0, _passphrase_callback);
+                if (err != ArchiveError.OK)
+                {
+                    throw new ArchiveOperationFailedException(_handle, nameof(archive_write_set_passphrase_callback), err);
                 }
             }
         }
@@ -130,7 +147,7 @@ namespace libarchive.Managed
                 case ArchiveFilterNames.zstd:
                     return archive_write_add_filter_zstd;
                 default:
-                    return null;
+                    return archive_write_add_filter_none;
             }
         }
 
@@ -219,6 +236,18 @@ namespace libarchive.Managed
             if (err != ArchiveError.OK)
             {
                 throw new ArchiveOperationFailedException(_handle, nameof(archive_write_set_skip_file), err);
+            }
+        }
+
+        public void SetFormatFromExtension(string filename, string? defaultExt = null)
+        {
+            var err = (defaultExt == null)
+                ? archive_write_set_format_filter_by_ext(_handle, filename)
+                : archive_write_set_format_filter_by_ext_def(_handle, filename, defaultExt);
+
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_set_format_filter_by_ext), err);
             }
         }
 

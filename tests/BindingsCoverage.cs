@@ -139,7 +139,11 @@ namespace tests
                 /// covered by <see cref="archive_match_path_unmatched_inclusions_next_w" />
                 nameof(archive_match_path_unmatched_inclusions_next),
                 /// covered by <see cref="archive_read_disk_open_w" />
-                nameof(archive_read_disk_open)
+                nameof(archive_read_disk_open),
+                // unnecessary utility methods
+                nameof(archive_utility_string_sort),
+                /// covered by <see cref="archive_read_next_header2" />
+                nameof(archive_read_next_header)
             }.Concat(deprecated).Concat(notPortable);
 
             var asm = AssemblyDefinition.ReadAssembly("libarchive-sharp.dll");

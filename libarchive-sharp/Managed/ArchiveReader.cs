@@ -92,10 +92,7 @@ namespace libarchive.Managed
         private Delegates.archive_passphrase_callback? _passphrase_callback;
         private Delegates.progress_callback? _progress_callback;
 
-        public delegate void SwitchRequestedDelegate();
         public delegate void ProgressDelegate();
-
-        public event SwitchRequestedDelegate? OnSwitchRequested;
         public event ProgressDelegate? OnProgress;
 
         public ArchiveCallbackData CallbackData { get; private set; }
@@ -106,6 +103,8 @@ namespace libarchive.Managed
         private ArchiveReaderOptions? _opts;
 
         public int BufferSize => _opts?.BufferSize ?? ArchiveConstants.BUFFER_SIZE;
+
+        private TypedPointer<archive> _handle => ArchiveHandle;
 
         public ArchiveReader(Stream stream, ArchiveReaderOptions? opts = null)
             : this(NewHandle(opts), [new ArchiveDataStream(stream)], true, opts)
@@ -322,6 +321,11 @@ namespace libarchive.Managed
             {
                 throw new ArchiveOperationFailedException(_handle, nameof(archive_read_append_filter_program_signature), err);
             }
+        }
+
+        public void SetExtractSkipFile(long device, long inode)
+        {
+            archive_read_extract_set_skip_file(_handle, device, inode);
         }
 
         public void Extract(TypedPointer<archive_entry> entry, ArchiveExtractFlags flags)

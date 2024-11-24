@@ -78,5 +78,12 @@ namespace libarchive
             nint private_data,
             TypedPointer<archive_entry> entry
         );
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public delegate bool archive_metadata_filter_callback(
+            TypedPointer<archive> archive,
+            nint private_data,
+            TypedPointer<archive_entry> entry);
     }
 }

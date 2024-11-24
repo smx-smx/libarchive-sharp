@@ -21,8 +21,8 @@ namespace libarchive.Managed
     public class ArchiveDiskWriter : ArchiveWriter
     {
         private readonly ArchiveOutputStream _outputStream;
-
         public ArchiveOutputStream OutputStream => _outputStream;
+        private TypedPointer<archive> _handle => ArchiveHandle;
 
         public ArchiveDiskWriter() : this(NewHandle(), 0, true)
         { }
@@ -74,7 +74,7 @@ namespace libarchive.Managed
             archive_write_disk_set_standard_lookup(handle);
         }
 
-        public void SetSkipFile(long device, long inode)
+        public new void SetSkipFile(long device, long inode)
         {
             var err = archive_write_disk_set_skip_file(_handle, device, inode);
             if (err != ArchiveError.OK)

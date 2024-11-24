@@ -20,7 +20,6 @@ namespace libarchive.Managed
 {
     public class ArchiveDataStreamLazy : IArchiveStream, IDisposable
     {
-        private bool _disposed;
         private readonly Lazy<ArchiveDataStream> _factory;
         private ArchiveDataStream _instance => _factory.Value;
 

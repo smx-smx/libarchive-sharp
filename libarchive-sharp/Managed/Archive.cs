@@ -28,13 +28,13 @@ namespace libarchive.Managed
         public static string VersionLz4 => archive_liblz4_version();
         public static string VersionZstd => archive_libzstd_version();
 
-        protected readonly TypedPointer<archive> _handle;
+        private readonly TypedPointer<archive> _handle;
         protected bool _disposed;
         protected readonly bool _owned;
 
-        public TypedPointer<archive> Handle => _handle;
+        public TypedPointer<archive> ArchiveHandle => _handle;
 
-        public static implicit operator TypedPointer<archive>(Archive self) => self.Handle;
+        public static implicit operator TypedPointer<archive>(Archive self) => self.ArchiveHandle;
 
         public long FilterCount => archive_filter_count(_handle);
         public string GetFilterName(int idx)

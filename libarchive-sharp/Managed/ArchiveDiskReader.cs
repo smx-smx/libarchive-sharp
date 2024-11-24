@@ -21,6 +21,22 @@ namespace libarchive.Managed
         private static readonly Delegates.archive_lookup_cleanup_callback _dummy_cleanup = (data) => { };
         private Delegates.archive_user_name_lookup_callback? _uname_lookup;
         private Delegates.archive_group_name_lookup_callback? _gname_lookup;
+        private Delegates.archive_metadata_filter_callback? _filter_callback;
+        private TypedPointer<archive> _handle => ArchiveHandle;
+
+        public Delegates.archive_metadata_filter_callback? FilterCallback
+        {
+            get => _filter_callback;
+            set
+            {
+                _filter_callback = value;
+                var err = archive_read_disk_set_metadata_filter_callback(_handle, value, 0);
+                if (err != ArchiveError.OK)
+                {
+                    throw new ArchiveOperationFailedException(_handle, nameof(archive_read_disk_set_metadata_filter_callback), err);
+                }
+            }
+        }
 
         private bool RestoreAccessTime
         {
@@ -149,6 +165,15 @@ namespace libarchive.Managed
                     _handle, 0,
                     _gname_lookup,
                     _dummy_cleanup);
+            }
+        }
+
+        public void Descend()
+        {
+            var err = archive_read_disk_descend(_handle);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_read_disk_descend), err);
             }
         }
 
