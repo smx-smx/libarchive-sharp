@@ -39,6 +39,8 @@ namespace libarchive.Managed
         private readonly IEnumerable<ArchiveDataBlock> _producer;
         private readonly ArchiveDataStreamer _streamer;
 
+        public static implicit operator TypedPointer<archive_entry>(ArchiveEntryItem self) => self.Header.Handle;
+
         public IEnumerable<byte> Bytes
         {
             get

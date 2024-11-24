@@ -13,6 +13,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Reflection.PortableExecutable;
 using System.Text;
 
 namespace tests
@@ -30,6 +31,21 @@ namespace tests
             {
                 LibArchive.Initialize(@"/usr/lib/x86_64-linux-gnu/libarchive.so");
             }
+        }
+
+        private ArchiveReader GivenTestReader()
+        {
+            var ms = GivenTestArchive();
+            var msLazy = new Lazy<Stream>(() => ms);
+
+            var reader = new ArchiveReader(new List<Lazy<Stream>> {
+                msLazy
+            }, new ArchiveReaderOptions
+            {
+                EnableFormats = [ArchiveFormat.TAR_USTAR],
+                EnableFilters = [ArchiveFilter.BZIP2],
+            });
+            return reader;
         }
 
         private MemoryStream GivenTestArchive()
@@ -129,8 +145,10 @@ namespace tests
                 EnableFilters = [ArchiveFilter.BZIP2]
             });
 
+            var nItems = 0;
             foreach (var entry in reader.Entries)
             {
+                ++nItems;
                 switch (entry.Index)
                 {
                     case 0:
@@ -149,6 +167,16 @@ namespace tests
                         break;
                 }
             }
+            Assert.That(nItems, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void TestErrorCodes()
+        {
+            using var reader = GivenTestReader();
+            reader.SetError(1234, "testing %s");
+            Assert.That(reader.LastError, Is.EqualTo(1234));
+            Assert.That(reader.LastErrorString, Is.EqualTo("testing %s"));
         }
 
         [Test]
@@ -166,24 +194,23 @@ namespace tests
                 EnableFilters = [ArchiveFilter.BZIP2]
             });
 
-            File.Delete("file.txt");
-
-            var entry = reader.Entries.First();
-            Assert.That(entry.Header.PathName, Is.EqualTo("test1.txt"));
-            Assert.That(entry.Header.FileType, Is.EqualTo(ArchiveEntryType.File));
-            Assert.That(entry.Header.Permissions, Is.EqualTo(Convert.ToUInt16("644", 8)));
-            Assert.That(entry.Header.Size, Is.GreaterThan(0));
-
-            // extract file
             using var dwr = new ArchiveDiskWriter();
-            dwr.AddEntry(entry, reader.InputStream);
+            foreach (var entry in reader.Entries)
+            {
+                File.Delete(entry.Header.PathName);
+                reader.Extract(entry, dwr);
+                Assert.That(File.Exists(entry.Header.PathName));
+                switch (entry.Index)
+                {
+                    case 0:
+                        Assert.That(File.ReadAllText(entry.Header.PathName), Is.EqualTo("Hello world"));
+                        break;
+                    case 1:
+                        Assert.That(File.ReadAllText(entry.Header.PathName), Is.EqualTo("Hello again"));
+                        break;
+                }
+            }
 
-            Assert.That(File.Exists("test.txt"));
-            Assert.That(File.ReadAllText("test.txt"), Is.EqualTo("Hello world"));
-
-            reader.SetError(1234, "testing %s");
-            Assert.That(reader.LastError, Is.EqualTo(1234));
-            Assert.That(reader.LastErrorString, Is.EqualTo("testing %s"));
         }
     }
 }
