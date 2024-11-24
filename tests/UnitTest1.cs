@@ -69,12 +69,79 @@ namespace tests
                 {
                     PathName = "test2.txt",
                     FileType = ArchiveEntryType.File,
-                    Permissions = Convert.ToUInt16("644", 8)
+                    Permissions = Convert.ToUInt16("644", 8),
+                    CreationTime = new DateTime(2000, 01, 01, 00, 00, 00)
                 }, new MemoryStream(Encoding.ASCII.GetBytes("Hello again")));
             }
-            ms.Position = 0;
             File.WriteAllBytes("arch.tar.bz2", ms.ToArray());
+            ms.Position = 0;
             return ms;
+        }
+
+        [Test]
+        public void TestMatchDate()
+        {
+            using var ms = new MemoryStream();
+            using (var writer = new ArchiveWriter(
+                ms,
+                format: ArchiveFormat.ZIP,
+                filters: [],
+                leaveOpen: true
+            ))
+            {
+                writer.AddEntry(new ArchiveEntry
+                {
+                    PathName = "test1.txt",
+                    FileType = ArchiveEntryType.File,
+                    Permissions = Convert.ToUInt16("644", 8),
+                    CreationTime = new DateTime(2024, 11, 04, 01, 00, 00)
+                }, new MemoryStream(Encoding.ASCII.GetBytes("Hello world")));
+
+                writer.AddEntry(new ArchiveEntry
+                {
+                    PathName = "test2.txt",
+                    FileType = ArchiveEntryType.File,
+                    Permissions = Convert.ToUInt16("644", 8),
+                    CreationTime = new DateTime(2000, 01, 01, 00, 00, 00)
+                }, new MemoryStream(Encoding.ASCII.GetBytes("Hello again")));
+            }
+            var reader = new ArchiveReader(ms);
+
+            var refDate = new DateTime(2024, 11, 04, 00, 00, 00);
+            var match = new ArchiveMatch()
+                // everything older must be excluded
+                .IncludeCreationTime(refDate,
+                    ArchiveMatchComparisonFlag.NEWER | ArchiveMatchComparisonFlag.EQUAL);
+
+            var nMatches = 0;
+            foreach (var entry in reader.Entries)
+            {
+                if (match.IsExcluded(entry))
+                {
+                    Assert.That(entry.Header.CreationTime.HasValue);
+                    Assert.That(entry.Header.CreationTime.Value.Year, Is.EqualTo(2000));
+                    nMatches++;
+                }
+            }
+            Assert.That(nMatches, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TestMatchPattern()
+        {
+            using var reader = GivenTestReader();
+            var match = new ArchiveMatch()
+                .IncludePathPattern(@"^test1\.txt");
+
+            var nMatches = 0;
+            foreach (var entry in reader.Entries)
+            {
+                if (match.IsExcluded(entry))
+                {
+                    nMatches++;
+                }
+            }
+            Assert.That(nMatches, Is.EqualTo(1));
         }
 
         [Test]

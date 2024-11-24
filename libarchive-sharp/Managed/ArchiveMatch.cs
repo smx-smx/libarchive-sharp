@@ -73,7 +73,7 @@ namespace libarchive.Managed
             }
         }
 
-        private ArchiveMatch WithTime(DateTime time, ArchiveMatchFlags flags)
+        private ArchiveMatch IncludeTime(DateTime time, ArchiveMatchFlags flags)
         {
             var elapsed = time.Subtract(DateTime.UnixEpoch);
             var err = archive_match_include_time(_handle, flags, (long)elapsed.TotalSeconds, elapsed.Nanoseconds);
@@ -84,7 +84,7 @@ namespace libarchive.Managed
             return this;
         }
 
-        private ArchiveMatch WithFileTime(string pathname, ArchiveMatchFlags flags)
+        private ArchiveMatch IncludeFileTime(string pathname, ArchiveMatchFlags flags)
         {
             var err = archive_match_include_file_time_w(_handle, flags, pathname);
             if (err != ArchiveError.OK)
@@ -94,25 +94,25 @@ namespace libarchive.Managed
             return this;
         }
 
-        public ArchiveMatch WithCreationTime(DateTime time, ArchiveMatchComparisonFlag mode)
+        public ArchiveMatch IncludeCreationTime(DateTime time, ArchiveMatchComparisonFlag mode)
         {
-            return WithTime(time, (ArchiveMatchFlags)ArchiveMatchTimeFlag.CTIME | (ArchiveMatchFlags)mode);
+            return IncludeTime(time, (ArchiveMatchFlags)ArchiveMatchTimeFlag.CTIME | (ArchiveMatchFlags)mode);
         }
-        public ArchiveMatch WithLastWriteTime(DateTime time, ArchiveMatchComparisonFlag mode)
+        public ArchiveMatch IncludeLastWriteTime(DateTime time, ArchiveMatchComparisonFlag mode)
         {
-            return WithTime(time, (ArchiveMatchFlags)ArchiveMatchTimeFlag.MTIME | (ArchiveMatchFlags)mode);
-        }
-
-        public ArchiveMatch WithCreationFileTime(string pathname, ArchiveMatchComparisonFlag mode)
-        {
-            return WithFileTime(pathname, (ArchiveMatchFlags)ArchiveMatchTimeFlag.CTIME | (ArchiveMatchFlags)mode);
-        }
-        public ArchiveMatch WithLastWriteFileTime(string pathname, ArchiveMatchComparisonFlag mode)
-        {
-            return WithFileTime(pathname, (ArchiveMatchFlags)ArchiveMatchTimeFlag.MTIME | (ArchiveMatchFlags)mode);
+            return IncludeTime(time, (ArchiveMatchFlags)ArchiveMatchTimeFlag.MTIME | (ArchiveMatchFlags)mode);
         }
 
-        public ArchiveMatch WithDate(DateTime time, ArchiveMatchFlags flags = 0)
+        public ArchiveMatch IncludeCreationFileTime(string pathname, ArchiveMatchComparisonFlag mode)
+        {
+            return IncludeFileTime(pathname, (ArchiveMatchFlags)ArchiveMatchTimeFlag.CTIME | (ArchiveMatchFlags)mode);
+        }
+        public ArchiveMatch IncludeLastWriteFileTime(string pathname, ArchiveMatchComparisonFlag mode)
+        {
+            return IncludeFileTime(pathname, (ArchiveMatchFlags)ArchiveMatchTimeFlag.MTIME | (ArchiveMatchFlags)mode);
+        }
+
+        public ArchiveMatch IncludeData(DateTime time, ArchiveMatchFlags flags = 0)
         {
             var utcTime = TimeZoneInfo.ConvertTimeToUtc(time);
             var sDateTime = time.ToString("ddd MMM dd HH:mm:ss 'UTC' yyyy");
@@ -154,7 +154,7 @@ namespace libarchive.Managed
             return res == 0 ? false : true;
         }
 
-        public ArchiveMatch WithoutEntry(TypedPointer<archive_entry> entry, ArchiveMatchFlags flags = 0)
+        public ArchiveMatch ExcludeEntry(TypedPointer<archive_entry> entry, ArchiveMatchFlags flags = 0)
         {
             var err = archive_match_exclude_entry(_handle, flags, entry);
             if (err != ArchiveError.OK)
@@ -164,7 +164,7 @@ namespace libarchive.Managed
             return this;
         }
 
-        public ArchiveMatch WithFilePattern(string pathname, char separator)
+        public ArchiveMatch IncludePathPatternsFromFile(string pathname, char separator)
         {
             var err = archive_match_include_pattern_from_file_w(_handle, pathname, separator);
             if (err != ArchiveError.OK)
@@ -174,7 +174,7 @@ namespace libarchive.Managed
             return this;
         }
 
-        public ArchiveMatch WithoutFilePattern(string pathname, char separator)
+        public ArchiveMatch ExcludePathPatternsFromFile(string pathname, char separator)
         {
             var err = archive_match_exclude_pattern_from_file_w(_handle, pathname, separator);
             if (err != ArchiveError.OK)
@@ -184,7 +184,7 @@ namespace libarchive.Managed
             return this;
         }
 
-        public ArchiveMatch WithPattern(string pattern)
+        public ArchiveMatch IncludePathPattern(string pattern)
         {
             var err = archive_match_include_pattern_w(_handle, pattern);
             if (err != ArchiveError.OK)
@@ -194,7 +194,7 @@ namespace libarchive.Managed
             return this;
         }
 
-        public ArchiveMatch WithoutPattern(string pattern)
+        public ArchiveMatch ExcludePathPattern(string pattern)
         {
             var err = archive_match_exclude_pattern_w(_handle, pattern);
             if (err != ArchiveError.OK)
@@ -204,7 +204,7 @@ namespace libarchive.Managed
             return this;
         }
 
-        public ArchiveMatch WithUid(long uid)
+        public ArchiveMatch IncludeUid(long uid)
         {
             var err = archive_match_include_uid(_handle, uid);
             if (err != ArchiveError.OK)
@@ -214,7 +214,7 @@ namespace libarchive.Managed
             return this;
         }
 
-        public ArchiveMatch WithGid(long gid)
+        public ArchiveMatch IncludeGid(long gid)
         {
             var err = archive_match_include_gid(_handle, gid);
             if (err != ArchiveError.OK)
@@ -225,7 +225,7 @@ namespace libarchive.Managed
 
         }
 
-        public ArchiveMatch WithGroupName(string gname)
+        public ArchiveMatch IncludeGroupName(string gname)
         {
             var err = archive_match_include_gname_w(_handle, gname);
             if (err != ArchiveError.OK)
@@ -235,7 +235,7 @@ namespace libarchive.Managed
             return this;
         }
 
-        public ArchiveMatch WithUserName(string uname)
+        public ArchiveMatch IncludeUserName(string uname)
         {
             var err = archive_match_include_uname_w(_handle, uname);
             if (err != ArchiveError.OK)
