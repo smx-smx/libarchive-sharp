@@ -37,7 +37,8 @@ namespace tests
             var ms = new MemoryStream();
             using (var writer = new ArchiveWriter(
                 ms,
-                ArchiveFormat.TAR_USTAR,
+                format: ArchiveFormat.TAR_USTAR,
+                filters: [ArchiveFilter.BZIP2],
                 leaveOpen: true
             ))
             {
@@ -61,13 +62,53 @@ namespace tests
         }
 
         [Test]
+        public void TestEntryWrite()
+        {
+            using var ms = new MemoryStream();
+            using (var writer = new ArchiveWriter(
+                ms,
+                ArchiveFormat.ZIP,
+                leaveOpen: true
+            ))
+            {
+                using var stuff = new MemoryStream();
+                for (int i = 0; i < 1024; i++)
+                {
+                    stuff.Write(Encoding.ASCII.GetBytes("1 2 3 4 5 6 7 8\n"));
+                }
+                stuff.Position = 0;
+
+                var entry = writer.NewEntry(new ArchiveEntry
+                {
+                    PathName = "test1.txt",
+                    FileType = ArchiveEntryType.File,
+                    Permissions = Convert.ToUInt16("644", 8)
+                });
+                entry.AddData(stuff);
+                entry.Close();
+            }
+            ms.Position = 0;
+            File.WriteAllBytes("arch1.zip", ms.ToArray());
+
+            var reader = new ArchiveReader(ms, new ArchiveReaderOptions
+            {
+                EnableFormats = [ArchiveFormat.ZIP],
+            });
+            var file = reader.Entries.First();
+            var bytes = file.Bytes.ToArray();
+
+            Assert.That(bytes.Length, Is.EqualTo(16384));
+            Assert.That(Encoding.ASCII.GetString(bytes).EndsWith("1 2 3 4 5 6 7 8\n"), Is.True);
+        }
+
+        [Test]
         public void TestSkip()
         {
             using var ms = GivenTestArchive();
             var reader = new ArchiveReader(ms, new ArchiveReaderOptions
             {
                 EnableFormats = [ArchiveFormat.TAR_USTAR],
-                EnableFilters = [ArchiveFilter.BZIP2]
+                EnableFilters = [ArchiveFilter.BZIP2],
             });
 
             var entry = reader.Entries.Skip(1).First();

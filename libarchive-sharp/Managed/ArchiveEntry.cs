@@ -14,6 +14,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
@@ -395,6 +396,29 @@ namespace libarchive.Managed
         {
             get => archive_entry_symlink_type(_handle);
             set => archive_entry_set_symlink_type(_handle, value);
+        }
+
+        public byte[] Digest(ArchiveEntryDigestType type)
+        {
+            var pdata = archive_entry_digest(_handle, type);
+            if (pdata == 0)
+            {
+                throw new ArchiveOperationFailedException(nameof(archive_entry_digest), "invalid digest pointer");
+            }
+            var digestSize = type switch
+            {
+                ArchiveEntryDigestType.MD5 => MD5.HashSizeInBytes,
+                ArchiveEntryDigestType.SHA1 => SHA1.HashSizeInBytes,
+                ArchiveEntryDigestType.SHA256 => SHA256.HashSizeInBytes,
+                ArchiveEntryDigestType.SHA384 => SHA384.HashSizeInBytes,
+                ArchiveEntryDigestType.SHA512 => SHA512.HashSizeInBytes,
+                ArchiveEntryDigestType.RMD160 => 20,
+                _ => throw new ArgumentException($"Invalid Digest Type {Enum.GetName(type)}")
+            };
+
+            var digest = new byte[digestSize];
+            Marshal.Copy(pdata, digest, 0, digest.Length);
+            return digest;
         }
 
         public Memory<byte> MacMetadata

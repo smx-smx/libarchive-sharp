@@ -59,6 +59,36 @@ namespace libarchive
         NamedPipe = Constants.AE_IFIFO,
     }
 
+    public enum ArchiveEntryDigestType
+    {
+        MD5 = 0x00000001,
+        RMD160 = 0x00000002,
+        SHA1 = 0x00000003,
+        SHA256 = 0x00000004,
+        SHA384 = 0x00000005,
+        SHA512 = 0x00000006,
+    }
+
+    public enum ArchiveSymlinkMode
+    {
+        Logical,
+        Physical,
+        Hybrid
+    }
+
+    [Flags]
+    public enum ArchiveReadDiskFlags
+    {
+        RESTORE_ATIME = 0x1,
+        HONOR_NODUMP = 0x2,
+        MAC_COPYFILE = 0x4,
+        NO_TRAVERSE_MOUNTS = 0x8,
+        NO_XATTR = 0x10,
+        NO_ACL = 0x20,
+        NO_FFLAGS = 0x40,
+        NO_SPARSE = 0x80
+    }
+
     public class ArchiveFilterNames
     {
         public const string base64 = "b64encode";

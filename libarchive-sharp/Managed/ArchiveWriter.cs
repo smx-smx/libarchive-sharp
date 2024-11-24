@@ -34,6 +34,20 @@ namespace libarchive.Managed
         private Delegates.archive_close_callback? _close_callback;
         private Delegates.archive_free_callback? _free_callback;
 
+        public int BufferSize { get; private set; }
+
+        public string Passphrase
+        {
+            set
+            {
+                var err = archive_write_set_passphrase(_handle, value);
+                if (err != ArchiveError.OK)
+                {
+                    throw new ArchiveOperationFailedException(_handle, nameof(archive_write_set_passphrase), err);
+                }
+            }
+        }
+
         public int BytesPerBlock
         {
             get => archive_write_get_bytes_per_block(_handle);
@@ -60,17 +74,20 @@ namespace libarchive.Managed
             }
         }
 
-        public ArchiveWriter(TypedPointer<archive> handle, bool owned)
+        public ArchiveWriter(TypedPointer<archive> handle, bool owned, int bufferSize = -1)
             : base(handle, owned)
         {
+            BufferSize = (bufferSize > 0)
+                ? bufferSize
+                : ArchiveConstants.BUFFER_SIZE;
         }
 
         public ArchiveWriter(
             Stream stream,
             ArchiveFormat format,
-            ArchiveCompression? compression = null,
             ICollection<ArchiveFilter>? filters = null,
-            bool leaveOpen = false
+            bool leaveOpen = false,
+            int bufferSize = -1
         )
             : this(
                   handle: NewHandle(),
@@ -78,7 +95,7 @@ namespace libarchive.Managed
                   owned: true,
                   format: format,
                   filters: filters,
-                  compression: compression
+                  bufferSize: bufferSize
             )
         { }
 
@@ -178,12 +195,33 @@ namespace libarchive.Managed
             }
         }
 
-        private void SetFormat(string format)
+        private void ZipSetDeflate()
         {
-            var setter = GetFormatSetter(format);
+            var err = archive_write_zip_set_compression_deflate(_handle);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_zip_set_compression_deflate), err);
+            }
+        }
+
+        private void ZipSetStore()
+        {
+            var err = archive_write_zip_set_compression_store(_handle);
+            if (err != ArchiveError.OK)
+            {
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_zip_set_compression_store), err);
+            }
+        }
+
+        private void SetFormat(string formatSpec)
+        {
+            var parts = formatSpec.Split('+');
+            var formatName = parts.First();
+
+            var setter = GetFormatSetter(formatSpec);
 
             var res = (setter == null)
-                    ? archive_write_set_format_by_name(_handle, format)
+                    ? archive_write_set_format_by_name(_handle, formatSpec)
                     : setter(_handle);
 
             if (res != ArchiveError.OK)
@@ -192,6 +230,27 @@ namespace libarchive.Managed
                     ? nameof(archive_write_set_format_by_name)
                     : setter.Method.Name;
                 throw new ArchiveOperationFailedException(_handle, methodName, "failed to set archive format");
+            }
+
+            if (parts.Length > 1)
+            {
+                var opts = parts.Skip(1).ToHashSet();
+                bool isDeflate = false;
+                bool isStore = false;
+                if ((isDeflate = opts.Contains("deflate")) || (isStore = opts.Contains("store")))
+                {
+                    if (formatName != "zip")
+                    {
+                        throw new ArgumentException("deflate can only be specified for zip files");
+                    }
+                    if (isDeflate)
+                    {
+                        ZipSetDeflate();
+                    } else if (isStore)
+                    {
+                        ZipSetStore();
+                    }
+                }
             }
         }
 
@@ -279,8 +338,7 @@ namespace libarchive.Managed
             ArchiveDataStream stream,
             bool owned,
             string format,
-            ICollection<string>? filters = null,
-            ArchiveCompression? compression = null
+            ICollection<string>? filters = null
         ) : this(handle, stream, owned)
         {
             archive_write_set_format_by_name(_handle, format);
@@ -300,7 +358,7 @@ namespace libarchive.Managed
             bool owned,
             ArchiveFormat format,
             ICollection<ArchiveFilter>? filters = null,
-            ArchiveCompression? compression = null
+            int bufferSize = -1
         ) : this(handle, stream, owned)
         {
             var res = archive_write_set_format(handle, format);
@@ -316,6 +374,9 @@ namespace libarchive.Managed
                 }
             }
             Setup(stream);
+            BufferSize = (bufferSize > 0)
+                ? bufferSize
+                : ArchiveConstants.BUFFER_SIZE;
         }
 
         public void AddEntry(ArchiveEntryItem entryRef, Stream? stream = null)
@@ -323,7 +384,7 @@ namespace libarchive.Managed
             AddEntry(entryRef.Header, stream);
         }
 
-        public void AddEntry(SharedPtr<ArchiveEntry> entryRef, Stream? stream = null)
+        private void AddEntryHeader(SharedPtr<ArchiveEntry> entryRef, Stream? stream = null)
         {
             var entry = entryRef.AddRef();
             try
@@ -333,15 +394,30 @@ namespace libarchive.Managed
                     entry.Size = stream.Length;
                 }
 
-                if (archive_write_header(_handle, entry) != ArchiveError.OK)
+                var err = archive_write_header(_handle, entry);
+                if (err != ArchiveError.OK)
                 {
-                    throw new ArchiveOperationFailedException(_handle, nameof(archive_write_header), "failed to write archive entry");
+                    throw new ArchiveOperationFailedException(_handle, nameof(archive_write_header), err);
                 }
             } finally
             {
                 entryRef.Release();
             }
+        }
 
+        public ArchiveEntryBuilder NewEntry(ArchiveEntry entryRef)
+        {
+            return NewEntry(new SharedPtr<ArchiveEntry>(entryRef));
+        }
+
+        public ArchiveEntryBuilder NewEntry(SharedPtr<ArchiveEntry> entryRef)
+        {
+            return new ArchiveEntryBuilder(this, entryRef);
+        }
+
+        public void AddEntry(SharedPtr<ArchiveEntry> entryRef, Stream? stream = null)
+        {
+            AddEntryHeader(entryRef, stream);
             if (stream == null)
             {
                 return;
@@ -362,13 +438,14 @@ namespace libarchive.Managed
                 var nWritten = archive_write_data(_handle, bufferHandle, (nuint)nRead);
                 if (nWritten < 0)
                 {
-                    throw new ArchiveOperationFailedException(_handle, nameof(archive_write_data), "failed to write data");
+                    throw new ArchiveOperationFailedException(_handle, nameof(archive_write_data), (ArchiveError)nWritten);
                 }
             } while (nRead > 0);
 
-            if (archive_write_finish_entry(_handle) != ArchiveError.OK)
+            var err = archive_write_finish_entry(_handle);
+            if (err != ArchiveError.OK)
             {
-                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_finish_entry), "failed to close entry");
+                throw new ArchiveOperationFailedException(_handle, nameof(archive_write_finish_entry), err);
             }
         }
 
